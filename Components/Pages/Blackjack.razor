@@ -1,0 +1,118 @@
+﻿@page "/blackjack"
+@using JankenGame.Models
+@rendermode InteractiveServer
+
+<h3>ブラックジャック</h3>
+
+<div class="game-board">
+    <section>
+        <h4>ディーラー</h4>
+        @foreach (var card in Dealer.Cards)
+        {
+            <div class="card">@card.Name</div>
+        }     
+        <p>スコア: @Dealer.Score</p>
+    </section>
+
+    <section>
+        <h4>プレイヤー</h4>
+        @foreach (var card in Player.Cards)
+        {
+            <div class="card">@card.Name</div>
+        }
+        <p>スコア: @Player.Score</p>
+    </section>
+</div>
+
+<div class="controls">
+    @if (!GameStarted)
+    {
+        <button @onclick="StartGame">ゲーム開始</button>
+    }
+    else if (!GameOver)
+    {
+        <button @onclick="Hit">ヒット</button>
+        <button @onclick="Stand">スタンド</button>
+    }
+    else
+    {
+        <p class="result">@ResultMessage</p>
+        <button @onclick="Reset">リセット</button>
+    }
+</div>
+
+@code {
+    bool GameStarted, GameOver;
+    string ResultMessage;
+    Deck deck;
+    Hand Player;
+    Hand Dealer;
+
+    protected override void OnInitialized()
+    {
+        deck = new Deck();
+        Player = new Hand();
+        Dealer = new Hand();
+        GameStarted = false;
+        GameOver = false;
+        ResultMessage = "";        
+
+        CheckForBlackjack();
+    }
+
+    void StartGame()
+    {                
+        // 初期配牌
+        Player.Add(deck.Draw());
+        Player.Add(deck.Draw());
+        Dealer.Add(deck.Draw());
+        Dealer.Add(deck.Draw());
+        GameStarted = true;
+    }
+
+    void Hit()
+    {
+        Player.Add(deck.Draw());
+        if (Player.IsBust)
+            EndGame();
+    }
+
+    void Stand()
+    {
+        // ディーラーのターン
+        while (Dealer.Score < 17)
+            Dealer.Add(deck.Draw());
+        EndGame();
+    }
+
+    void CheckForBlackjack()
+    {
+        if (Player.Score == 21)
+            EndGame();
+    }
+
+    void EndGame()
+    {
+        GameOver = true;
+        // プレイヤーバースト
+        if (Player.IsBust)
+            ResultMessage = "あなたはバースト！ディーラーの勝ち…";
+        // ディーラーバースト
+        else if (Dealer.IsBust)
+            ResultMessage = "ディーラーがバースト！あなたの勝ち🎉";
+        else if (Player.Score > Dealer.Score)
+            ResultMessage = "あなたの勝ち🎉";
+        else if (Player.Score < Dealer.Score)
+            ResultMessage = "ディーラーの勝ち…";
+        else
+            ResultMessage = "引き分け（プッシュ）";
+    }
+
+    void Reset()
+    {
+        GameStarted = false;
+        GameOver = false;
+        Player.ResetCards();
+        Dealer.ResetCards();
+    }
+}
