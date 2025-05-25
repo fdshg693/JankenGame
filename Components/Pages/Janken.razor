@@ -1,4 +1,5 @@
 ﻿@page "/janken"
+@using JankenGame.Models.Janken
 @rendermode InteractiveServer
 
 <h3>じゃんけんゲーム</h3>
@@ -19,14 +20,32 @@
     </div>
 }
 
+@if (RecentRecords.Any())
+{
+    <div class="history">
+        <h4>直近の履歴（最大5件）</h4>
+        <ul>
+            @foreach (var record in RecentRecords)
+            {
+                <li>
+                    あなた：@record.PlayerHand.GetDescription() ／ コンピューター：@record.ComputerHand.GetDescription() → 結果：@record.Outcome.GetDescription()（@record.Timestamp.ToString("HH:mm:ss")）
+                </li>
+            }
+        </ul>
+    </div>
+}
+
 @code {
-    int UserScore = 0, ComputerScore = 0;
+    int UserScore = 0;
+    int ComputerScore = 0;
     string OutcomeMessage = "";
 
-	JankenPlayer Player = new JankenPlayer();
-	JankenPlayer Computer = new JankenPlayer();
-
+    JankenPlayer Player = new JankenPlayer();
+    JankenPlayer Computer = new JankenPlayer();
+    JankenRecordList RecordList = new JankenRecordList();
     Random rnd = new();
+
+    IEnumerable<JankenRecord> RecentRecords => RecordList.OrderByDescending(r => r.Timestamp).Take(5);
 
     void Play(JankenHand userJankenHand)
     {
@@ -37,9 +56,20 @@
 
     void DetermineWinner()
     {
+        if (Player.Hand == null)
+        {
+            OutcomeMessage = "手を選んでください。";
+            return;
+        }
+        if (Computer.Hand == null)
+        {
+            OutcomeMessage = "コンピューターの手を決定中...";
+            return;
+        }
         if (Player.Hand == Computer.Hand)
         {
             OutcomeMessage = "引き分け！";
+            RecordList.AddRecord(Player.Hand, Computer.Hand, JankenResult.Draw);
         }
         else if (
             (Player.Hand == JankenHand.Rock && Computer.Hand == JankenHand.Scissors) ||
@@ -49,11 +79,13 @@
         {
             OutcomeMessage = "あなたの勝ち！🎉";
             UserScore++;
+            RecordList.AddRecord(Player.Hand, Computer.Hand, JankenResult.Win);
         }
         else
         {
             OutcomeMessage = "コンピューターの勝ち...";
             ComputerScore++;
+            RecordList.AddRecord(Player.Hand, Computer.Hand, JankenResult.Lose);
         }
     }
 
@@ -61,8 +93,9 @@
     {
         UserScore = 0;
         ComputerScore = 0;
-		Player = new JankenPlayer();
-		Computer = new JankenPlayer();
+        Player = new JankenPlayer();
+        Computer = new JankenPlayer();
         OutcomeMessage = "";
-	}
+        RecordList.Clear();
+    }
 }

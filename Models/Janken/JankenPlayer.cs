@@ -1,4 +1,4 @@
-﻿namespace JankenGame.Models
+﻿namespace JankenGame.Models.Janken
 {
     public class JankenPlayer
     {

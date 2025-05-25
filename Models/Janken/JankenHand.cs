@@ -2,7 +2,7 @@
 using System.Reflection;
 
 
-namespace JankenGame.Models
+namespace JankenGame.Models.Janken
 {
     public enum JankenHand
     {

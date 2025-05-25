@@ -1,4 +1,4 @@
-﻿namespace JankenGame.Models
+﻿namespace JankenGame.Models.BlackJack
 {
     public enum Suit { Clubs, Diamonds, Hearts, Spades }
     public enum Rank
