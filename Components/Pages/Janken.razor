@@ -4,47 +4,47 @@
 <h3>じゃんけんゲーム</h3>
 
 <div class="choices">
-    <button @onclick="() => Play(Move.Rock)">✊  グー</button>
-    <button @onclick="() => Play(Move.Paper)">✋  パー</button>
-    <button @onclick="() => Play(Move.Scissors)">✌️  チョキ</button>
+    <button @onclick="() => Play(JankenHand.Rock)">✊  グー</button>
+    <button @onclick="() => Play(JankenHand.Paper)">✋  パー</button>
+    <button @onclick="() => Play(JankenHand.Scissors)">✌️  チョキ</button>
 </div>
 
-@if (UserMove.HasValue)
+@if (!string.IsNullOrEmpty(Player.Hand.ToString()) && !string.IsNullOrEmpty(Computer.Hand.ToString()))
 {
     <div class="result">
-        <p>あなた：@UserMove.Value → コンピューター：@ComputerMove</p>
+        <p>あなた：@Player.Hand.ToString() → コンピューター：@Computer.Hand.ToString()</p>
         <p>@OutcomeMessage</p>
         <p>＜現在のスコア＞ あなた：@UserScore ／ コンピューター：@ComputerScore</p>
+        <button @onclick="ResetGame">リセット</button>
     </div>
 }
 
 @code {
-    enum Move { Rock, Paper, Scissors }
-
-    Move? UserMove;
-    Move ComputerMove;
     int UserScore = 0, ComputerScore = 0;
     string OutcomeMessage = "";
 
+	JankenPlayer Player = new JankenPlayer();
+	JankenPlayer Computer = new JankenPlayer();
+
     Random rnd = new();
 
-    void Play(Move user)
+    void Play(JankenHand userJankenHand)
     {
-        UserMove = user;
-        ComputerMove = (Move)rnd.Next(0, 3);
+        Player.Hand = userJankenHand;
+        Computer.Hand = (JankenHand)rnd.Next(0, 3);
         DetermineWinner();
     }
 
     void DetermineWinner()
     {
-        if (UserMove == ComputerMove)
+        if (Player.Hand == Computer.Hand)
         {
             OutcomeMessage = "引き分け！";
         }
         else if (
-            (UserMove == Move.Rock && ComputerMove == Move.Scissors) ||
-            (UserMove == Move.Paper && ComputerMove == Move.Rock) ||
-            (UserMove == Move.Scissors && ComputerMove == Move.Paper)
+            (Player.Hand == JankenHand.Rock && Computer.Hand == JankenHand.Scissors) ||
+            (Player.Hand == JankenHand.Paper && Computer.Hand == JankenHand.Rock) ||
+            (Player.Hand == JankenHand.Scissors && Computer.Hand == JankenHand.Paper)
         )
         {
             OutcomeMessage = "あなたの勝ち！🎉";
@@ -56,4 +56,13 @@
             ComputerScore++;
         }
     }
+
+    void ResetGame()
+    {
+        UserScore = 0;
+        ComputerScore = 0;
+		Player = new JankenPlayer();
+		Computer = new JankenPlayer();
+        OutcomeMessage = "";
+	}
 }
