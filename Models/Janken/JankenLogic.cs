@@ -2,7 +2,7 @@
 {
     public static class JankenLogic
     {
-        public static List<JankenPlayer> DetermineWinner(JankenPlayer[] players)
+        public static List<JankenPlayer> DetermineWinner(JankenPlayerList players)
         {
             var totalHands = players.Select(p => p.Hand).Distinct().ToList();
             if (totalHands.Count == 3)

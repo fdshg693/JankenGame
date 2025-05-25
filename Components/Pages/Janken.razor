@@ -9,14 +9,14 @@
 	<button class="btn @(SelectedIndex == 0 ? "btn-primary" : "btn-secondary")" @onclick="() => SetHand(JankenHand.Rock)">✊  グー</button>
 	<button class="btn @(SelectedIndex == 1 ? "btn-primary" : "btn-secondary")" @onclick="() => SetHand(JankenHand.Paper)">✋  パー</button>
 	<button class="btn @(SelectedIndex == 2 ? "btn-primary" : "btn-secondary")" @onclick="() => SetHand(JankenHand.Scissors)">✌️  チョキ</button>
-	<button class="btn @(clicked == true ? "btn-primary" : "btn-secondary")" @onclick="() => Judge(Player1)">手を決定</button>
+	<button class="btn @(clicked == true ? "btn-primary" : "btn-secondary")" @onclick="() => Judge()">手を決定</button>
 	<button class="btn btn-secondary" @onclick="NewGame">リセット</button>
 </div>
 
-@if (Player1.Hand != null && Computer1.Hand != null)
+@if (clicked)
 {
 	<div class="result">
-		<p>あなた：@Player1.Hand?.GetDescription() コンピューター1：@Computer1.Hand?.GetDescription() コンピューター2：@Computer2.Hand?.GetDescription()</p>
+		<p>@jankenPlayers.ShowInfo()</p>
 		<p>@OutcomeMessage</p>
 	</div>
 }
@@ -64,10 +64,7 @@
 @code {
 	int SelectedIndex = -1;
 	string OutcomeMessage = "";
-	JankenPlayer Player1;
-	JankenPlayer Computer1;
-	JankenPlayer Computer2;
-	JankenPlayer[] jankenPlayers;
+	JankenPlayerList jankenPlayers = new JankenPlayerList(["Player1", "Computer1", "Computer2"]);
 
 	JankenRecordList RecordList = new JankenRecordList();
 	Random rnd = new();
@@ -83,17 +80,29 @@
 	void SetHand(JankenHand jankenHand)
 	{
 		if (clicked) return;
-		Player1.Hand = jankenHand;
+		jankenPlayers.SetPlayerHand("Player1", jankenHand);
 		SelectedIndex = (int)jankenHand;
 	}
 
-	async Task Judge(JankenPlayer player)
+	// じゃんけんの結果を判定する
+	async Task Judge()
 	{
-		if (clicked) return; // クリックを一度だけ許可
+		if(SelectedIndex == -1)
+		{
+			OutcomeMessage = "手を選択してください。";
+			return;
+		}
+		// クリックを一度だけ許可
+		if (clicked) return; 
 		clicked = true;
+		
+		//　コンピューターの手をランダムに決定
+		var computer1Hand = (JankenHand)rnd.Next(0, 3);
+		var computer2Hand = (JankenHand)rnd.Next(0, 3);		
+		jankenPlayers.SetPlayerHand("Computer1", computer1Hand);
+		jankenPlayers.SetPlayerHand("Computer2", computer2Hand);
 
-		Computer1.Hand = (JankenHand)rnd.Next(0, 3);
-		Computer2.Hand = (JankenHand)rnd.Next(0, 3);
+		//　じゃんけんの結果を判定
 		var winners = JankenLogic.DetermineWinner(jankenPlayers);
 		SetOutcomeMessage(winners);
 		RecordList.AddRecord(winners);
@@ -107,13 +116,11 @@
 	// 2秒後にゲームの表示を、試合の記録を除いてリセットする
 	async Task ResetGameDisplay()
 	{
-		await Task.Delay(2000);
-		clicked = false; // 2秒後にクリックを再度許可
+		await Task.Delay(5000);
+		clicked = false; // 5秒後にクリックを再度許可
 		SelectedIndex = -1; //ボタン表示を元に戻す
-		OutcomeMessage = "";
-		Player1.Hand = null;
-		Computer1.Hand = null;
-		Computer2.Hand = null;
+		OutcomeMessage = ""; // メッセージを空にする
+		jankenPlayers = jankenPlayers.RecreateSelf();
 	}
 
 	//　勝敗結果を元に、メッセージを表示
@@ -134,10 +141,7 @@
 	// ゲームを全て初期化する
 	void NewGame()
 	{
-		Player1 = new JankenPlayer("Player1");
-		Computer1 = new JankenPlayer("Computer1");
-		Computer2 = new JankenPlayer("Computer2");
-		jankenPlayers = new[] { Player1, Computer1, Computer2 };
+		jankenPlayers = jankenPlayers.RecreateSelf();
 		OutcomeMessage = "";
 		RecordList.Clear();
 		SelectedIndex = -1;
