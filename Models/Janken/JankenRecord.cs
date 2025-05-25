@@ -31,5 +31,8 @@
             var record = new JankenRecord(playerHand.Value, computerHand.Value, outcome);
             this.Add(record);
         }
+        public int TotalWins => this.Count(r => r.Outcome == JankenResult.Win);
+        public int TotalLosses => this.Count(r => r.Outcome == JankenResult.Lose);
+        public int TotalDraws => this.Count(r => r.Outcome == JankenResult.Draw);
     }
 }

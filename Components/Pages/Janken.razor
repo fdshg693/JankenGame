@@ -15,7 +15,7 @@
     <div class="result">
         <p>あなた：@Player.Hand?.GetDescription() → コンピューター：@Computer.Hand?.GetDescription()</p>
         <p>@OutcomeMessage</p>
-        <p>＜現在のスコア＞ あなた：@UserScore ／ コンピューター：@ComputerScore</p>
+        <p>＜現在のスコア＞ @RecordList.TotalWins　勝:  @RecordList.TotalLosses 敗;　@RecordList.TotalDraws 引き分け</p>
         <button @onclick="ResetGame">リセット</button>
     </div>
 }
@@ -36,8 +36,6 @@
 }
 
 @code {
-    int UserScore = 0;
-    int ComputerScore = 0;
     string OutcomeMessage = "";
 
     JankenPlayer Player = new JankenPlayer();
@@ -78,21 +76,17 @@
         )
         {
             OutcomeMessage = "あなたの勝ち！🎉";
-            UserScore++;
             RecordList.AddRecord(Player.Hand, Computer.Hand, JankenResult.Win);
         }
         else
         {
             OutcomeMessage = "コンピューターの勝ち...";
-            ComputerScore++;
             RecordList.AddRecord(Player.Hand, Computer.Hand, JankenResult.Lose);
         }
     }
 
     void ResetGame()
     {
-        UserScore = 0;
-        ComputerScore = 0;
         Player = new JankenPlayer();
         Computer = new JankenPlayer();
         OutcomeMessage = "";
