@@ -9,6 +9,8 @@ namespace JankenGame.Models.Janken
         [Description("負け")]
         Lose = -1,
         [Description("引き分け")]
-        Draw = 0
+        Draw = 0,
+        [Description("未決定")]
+        Undecided = -999
     }
 }

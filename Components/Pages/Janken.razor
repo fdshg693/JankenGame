@@ -4,19 +4,21 @@
 
 <h3>じゃんけんゲーム</h3>
 
+<p>Player1</p>
 <div class="choices">
-    <button @onclick="() => Play(JankenHand.Rock)">✊  グー</button>
-    <button @onclick="() => Play(JankenHand.Paper)">✋  パー</button>
-    <button @onclick="() => Play(JankenHand.Scissors)">✌️  チョキ</button>
+    <button class="btn @(SelectedIndex == 0 ? "btn-primary" : "btn-secondary")" @onclick="() => SetHand(JankenHand.Rock)">✊  グー</button>
+    <button class="btn @(SelectedIndex == 1 ? "btn-primary" : "btn-secondary")" @onclick="() => SetHand(JankenHand.Paper)">✋  パー</button>
+    <button class="btn @(SelectedIndex == 2 ? "btn-primary" : "btn-secondary")" @onclick="() => SetHand(JankenHand.Scissors)">✌️  チョキ</button>
 </div>
+<button class="btn @(clicked == true ? "btn-primary" : "btn-secondar")" @onclick="() => Judge(Player1)">手を決定</button>
+<button class="btn" @onclick="ResetGame">リセット</button>
 
-@if (Player.Hand != null && Computer.Hand != null)
+@if (Player1.Hand != null && Computer.Hand != null)
 {
     <div class="result">
-        <p>あなた：@Player.Hand?.GetDescription() → コンピューター：@Computer.Hand?.GetDescription()</p>
+        <p>あなた：@Player1.Hand?.GetDescription() → コンピューター：@Computer.Hand?.GetDescription()</p>
         <p>@OutcomeMessage</p>
-        <p>＜現在のスコア＞ @RecordList.TotalWins　勝:  @RecordList.TotalLosses 敗;　@RecordList.TotalDraws 引き分け</p>
-        <button @onclick="ResetGame">リセット</button>
+        <p>＜現在のスコア＞ @RecordList.TotalWins　勝:  @RecordList.TotalLosses 敗:　@RecordList.TotalDraws 引き分け:</p>        
     </div>
 }
 
@@ -36,60 +38,78 @@
 }
 
 @code {
+    int SelectedIndex = -1;
     string OutcomeMessage = "";
 
-    JankenPlayer Player = new JankenPlayer();
+    JankenPlayer Player1 = new JankenPlayer();
     JankenPlayer Computer = new JankenPlayer();
     JankenRecordList RecordList = new JankenRecordList();
     Random rnd = new();
+    bool clicked = false;
 
     IEnumerable<JankenRecord> RecentRecords => RecordList.OrderByDescending(r => r.Timestamp).Take(5);
 
-    void Play(JankenHand userJankenHand)
+    void SetHand(JankenHand jankenHand)
     {
-        Player.Hand = userJankenHand;
+        if (clicked) return;
+        Player1.Hand = jankenHand;
+        SelectedIndex = (int)jankenHand;
+    }
+
+    async Task Judge(JankenPlayer player)
+    {
+        if (clicked) return; // クリックを一度だけ許可
+        clicked = true;
+        
         Computer.Hand = (JankenHand)rnd.Next(0, 3);
-        DetermineWinner();
+        var result = JankenLogic.DetermineWinner(Player1, Computer);
+        SetOutcomeMessage(result);
+        RecordList.AddRecord(Player1.Hand, Computer.Hand, result);   
+        
+		//　勝敗結果を元に、メッセージを表示
+        StateHasChanged();
+		//　時間をおいてゲームの表示をリセット
+        await ResetGameDisplay();
+    }    
+
+	// 2秒後にゲームの表示を、試合の記録を除いてリセットする
+    async Task ResetGameDisplay()
+    {        
+        await Task.Delay(2000);
+        clicked = false; // 2秒後にクリックを再度許可
+        SelectedIndex = -1; //ボタン表示を元に戻す
+        OutcomeMessage = "";
+        Player1.Hand = null;
+        Computer.Hand = null;
     }
 
-    void DetermineWinner()
+    //　勝敗結果を元に、メッセージを表示
+    void SetOutcomeMessage(JankenResult result)
     {
-        if (Player.Hand == null)
+        switch (result)
         {
-            OutcomeMessage = "手を選んでください。";
-            return;
-        }
-        if (Computer.Hand == null)
-        {
-            OutcomeMessage = "コンピューターの手を決定中...";
-            return;
-        }
-        if (Player.Hand == Computer.Hand)
-        {
-            OutcomeMessage = "引き分け！";
-            RecordList.AddRecord(Player.Hand, Computer.Hand, JankenResult.Draw);
-        }
-        else if (
-            (Player.Hand == JankenHand.Rock && Computer.Hand == JankenHand.Scissors) ||
-            (Player.Hand == JankenHand.Paper && Computer.Hand == JankenHand.Rock) ||
-            (Player.Hand == JankenHand.Scissors && Computer.Hand == JankenHand.Paper)
-        )
-        {
-            OutcomeMessage = "あなたの勝ち！🎉";
-            RecordList.AddRecord(Player.Hand, Computer.Hand, JankenResult.Win);
-        }
-        else
-        {
-            OutcomeMessage = "コンピューターの勝ち...";
-            RecordList.AddRecord(Player.Hand, Computer.Hand, JankenResult.Lose);
+            case JankenResult.Win:
+                OutcomeMessage = "あなたの勝ちです！";
+                break;
+            case JankenResult.Lose:
+                OutcomeMessage = "あなたの負けです。";
+                break;
+            case JankenResult.Draw:
+                OutcomeMessage = "引き分けです。";
+                break;
+            default:
+                OutcomeMessage = "不明なエラーが発生しました。再度お試しください";
+                break;
         }
     }
 
+    // ゲームを全て初期化する
     void ResetGame()
     {
-        Player = new JankenPlayer();
+        Player1 = new JankenPlayer();
         Computer = new JankenPlayer();
         OutcomeMessage = "";
         RecordList.Clear();
+        SelectedIndex = -1;
     }
 }
