@@ -9,10 +9,10 @@
     <button @onclick="() => Play(JankenHand.Scissors)">✌️  チョキ</button>
 </div>
 
-@if (!string.IsNullOrEmpty(Player.Hand.ToString()) && !string.IsNullOrEmpty(Computer.Hand.ToString()))
+@if (Player.Hand != null && Computer.Hand != null)
 {
     <div class="result">
-        <p>あなた：@Player.Hand.ToString() → コンピューター：@Computer.Hand.ToString()</p>
+        <p>あなた：@Player.Hand?.GetDescription() → コンピューター：@Computer.Hand?.GetDescription()</p>
         <p>@OutcomeMessage</p>
         <p>＜現在のスコア＞ あなた：@UserScore ／ コンピューター：@ComputerScore</p>
         <button @onclick="ResetGame">リセット</button>
