@@ -2,37 +2,22 @@
 {
     public class JankenRecord
     {
-        public JankenHand PlayerHand { get; set; }
-        public JankenHand ComputerHand { get; set; }
-        public JankenResult Outcome { get; set; }
+        public List<JankenPlayer> Winners { get; set; }
         public DateTime Timestamp { get; set; }
 
-        public JankenRecord(JankenHand playerHand, JankenHand computerHand, JankenResult outcome)
+        public JankenRecord(List<JankenPlayer> winners)
         {
-            PlayerHand = playerHand;
-            ComputerHand = computerHand;
-            Outcome = outcome;
+            Winners = winners ?? throw new ArgumentNullException(nameof(winners), "Winners cannot be null.");
             Timestamp = DateTime.Now;
         }
     }
 
     public class JankenRecordList : List<JankenRecord>
     {
-        public void AddRecord(JankenHand? playerHand, JankenHand? computerHand, JankenResult outcome)
+        public void AddRecord(List<JankenPlayer> winners)
         {
-            if (playerHand == null)
-            {
-                throw new ArgumentNullException(nameof(playerHand), "Player hand cannot be null.");
-            }
-            if (computerHand == null)
-            {
-                throw new ArgumentNullException(nameof(computerHand), "Computer hand cannot be null.");
-            }
-            var record = new JankenRecord(playerHand.Value, computerHand.Value, outcome);
+            var record = new JankenRecord(winners);
             this.Add(record);
         }
-        public int TotalWins => this.Count(r => r.Outcome == JankenResult.Win);
-        public int TotalLosses => this.Count(r => r.Outcome == JankenResult.Lose);
-        public int TotalDraws => this.Count(r => r.Outcome == JankenResult.Draw);
     }
 }

@@ -6,110 +6,140 @@
 
 <p>Player1</p>
 <div class="choices">
-    <button class="btn @(SelectedIndex == 0 ? "btn-primary" : "btn-secondary")" @onclick="() => SetHand(JankenHand.Rock)">✊  グー</button>
-    <button class="btn @(SelectedIndex == 1 ? "btn-primary" : "btn-secondary")" @onclick="() => SetHand(JankenHand.Paper)">✋  パー</button>
-    <button class="btn @(SelectedIndex == 2 ? "btn-primary" : "btn-secondary")" @onclick="() => SetHand(JankenHand.Scissors)">✌️  チョキ</button>
+	<button class="btn @(SelectedIndex == 0 ? "btn-primary" : "btn-secondary")" @onclick="() => SetHand(JankenHand.Rock)">✊  グー</button>
+	<button class="btn @(SelectedIndex == 1 ? "btn-primary" : "btn-secondary")" @onclick="() => SetHand(JankenHand.Paper)">✋  パー</button>
+	<button class="btn @(SelectedIndex == 2 ? "btn-primary" : "btn-secondary")" @onclick="() => SetHand(JankenHand.Scissors)">✌️  チョキ</button>
+	<button class="btn @(clicked == true ? "btn-primary" : "btn-secondary")" @onclick="() => Judge(Player1)">手を決定</button>
+	<button class="btn btn-secondary" @onclick="NewGame">リセット</button>
 </div>
-<button class="btn @(clicked == true ? "btn-primary" : "btn-secondar")" @onclick="() => Judge(Player1)">手を決定</button>
-<button class="btn" @onclick="ResetGame">リセット</button>
 
-@if (Player1.Hand != null && Computer.Hand != null)
+@if (Player1.Hand != null && Computer1.Hand != null)
 {
-    <div class="result">
-        <p>あなた：@Player1.Hand?.GetDescription() → コンピューター：@Computer.Hand?.GetDescription()</p>
-        <p>@OutcomeMessage</p>
-        <p>＜現在のスコア＞ @RecordList.TotalWins　勝:  @RecordList.TotalLosses 敗:　@RecordList.TotalDraws 引き分け:</p>        
-    </div>
+	<div class="result">
+		<p>あなた：@Player1.Hand?.GetDescription() コンピューター1：@Computer1.Hand?.GetDescription() コンピューター2：@Computer2.Hand?.GetDescription()</p>
+		<p>@OutcomeMessage</p>
+	</div>
 }
 
 @if (RecentRecords.Any())
 {
-    <div class="history">
-        <h4>直近の履歴（最大5件）</h4>
-        <ul>
-            @foreach (var record in RecentRecords)
-            {
-                <li>
-                    あなた：@record.PlayerHand.GetDescription() ／ コンピューター：@record.ComputerHand.GetDescription() → 結果：@record.Outcome.GetDescription()（@record.Timestamp.ToString("HH:mm:ss")）
-                </li>
-            }
-        </ul>
-    </div>
+	<div class="container my-4 history">
+		<h4 class="mb-3">直近の履歴（最大5件）</h4>
+
+		<div class="row g-3">
+			@foreach (var record in RecentRecords)
+			{
+				<!-- カードでレコードを表示 -->
+				<div class="col-12 col-md-6 col-lg-4">
+					<div class="card h-100 shadow-sm">
+						<!-- ヘッダーにタイムスタンプ -->
+						<div class="card-header bg-light">
+							<small class="text-secondary">
+								@record.Timestamp.ToString("yyyy/MM/dd HH:mm")
+							</small>
+						</div>
+
+						<div class="card-body d-flex flex-column">
+							<h5 class="card-title">勝者</h5>
+
+							<!-- List group で勝者をリスト化 -->
+							<ul class="list-group list-group-flush mb-3">
+								@foreach (var winner in record.Winners)
+								{
+									<li class="list-group-item">
+										<!-- バッジで強調表示 -->
+										<span class="badge bg-primary me-2">Winner</span>
+										@winner.Name
+									</li>
+								}
+							</ul>
+						</div>
+					</div>
+				</div>
+			}
+		</div>
+	</div>
 }
 
 @code {
-    int SelectedIndex = -1;
-    string OutcomeMessage = "";
+	int SelectedIndex = -1;
+	string OutcomeMessage = "";
+	JankenPlayer Player1;
+	JankenPlayer Computer1;
+	JankenPlayer Computer2;
+	JankenPlayer[] jankenPlayers;
 
-    JankenPlayer Player1 = new JankenPlayer();
-    JankenPlayer Computer = new JankenPlayer();
-    JankenRecordList RecordList = new JankenRecordList();
-    Random rnd = new();
-    bool clicked = false;
+	JankenRecordList RecordList = new JankenRecordList();
+	Random rnd = new();
+	bool clicked = false;
 
-    IEnumerable<JankenRecord> RecentRecords => RecordList.OrderByDescending(r => r.Timestamp).Take(5);
+	IEnumerable<JankenRecord> RecentRecords => RecordList.OrderByDescending(r => r.Timestamp).Take(5);
 
-    void SetHand(JankenHand jankenHand)
-    {
-        if (clicked) return;
-        Player1.Hand = jankenHand;
-        SelectedIndex = (int)jankenHand;
-    }
+	protected override void OnInitialized()
+	{
+		NewGame();
+	}
 
-    async Task Judge(JankenPlayer player)
-    {
-        if (clicked) return; // クリックを一度だけ許可
-        clicked = true;
-        
-        Computer.Hand = (JankenHand)rnd.Next(0, 3);
-        var result = JankenLogic.DetermineWinner(Player1, Computer);
-        SetOutcomeMessage(result);
-        RecordList.AddRecord(Player1.Hand, Computer.Hand, result);   
-        
+	void SetHand(JankenHand jankenHand)
+	{
+		if (clicked) return;
+		Player1.Hand = jankenHand;
+		SelectedIndex = (int)jankenHand;
+	}
+
+	async Task Judge(JankenPlayer player)
+	{
+		if (clicked) return; // クリックを一度だけ許可
+		clicked = true;
+
+		Computer1.Hand = (JankenHand)rnd.Next(0, 3);
+		Computer2.Hand = (JankenHand)rnd.Next(0, 3);
+		var winners = JankenLogic.DetermineWinner(jankenPlayers);
+		SetOutcomeMessage(winners);
+		RecordList.AddRecord(winners);
+
 		//　勝敗結果を元に、メッセージを表示
-        StateHasChanged();
+		StateHasChanged();
 		//　時間をおいてゲームの表示をリセット
-        await ResetGameDisplay();
-    }    
+		await ResetGameDisplay();
+	}
 
 	// 2秒後にゲームの表示を、試合の記録を除いてリセットする
-    async Task ResetGameDisplay()
-    {        
-        await Task.Delay(2000);
-        clicked = false; // 2秒後にクリックを再度許可
-        SelectedIndex = -1; //ボタン表示を元に戻す
-        OutcomeMessage = "";
-        Player1.Hand = null;
-        Computer.Hand = null;
-    }
+	async Task ResetGameDisplay()
+	{
+		await Task.Delay(2000);
+		clicked = false; // 2秒後にクリックを再度許可
+		SelectedIndex = -1; //ボタン表示を元に戻す
+		OutcomeMessage = "";
+		Player1.Hand = null;
+		Computer1.Hand = null;
+		Computer2.Hand = null;
+	}
 
-    //　勝敗結果を元に、メッセージを表示
-    void SetOutcomeMessage(JankenResult result)
-    {
-        switch (result)
-        {
-            case JankenResult.Win:
-                OutcomeMessage = "あなたの勝ちです！";
-                break;
-            case JankenResult.Lose:
-                OutcomeMessage = "あなたの負けです。";
-                break;
-            case JankenResult.Draw:
-                OutcomeMessage = "引き分けです。";
-                break;
-            default:
-                OutcomeMessage = "不明なエラーが発生しました。再度お試しください";
-                break;
-        }
-    }
+	//　勝敗結果を元に、メッセージを表示
+	void SetOutcomeMessage(List<JankenPlayer>? winners)
+	{
+		if (winners == null || winners.Count == 0)
+		{
+			OutcomeMessage = "引き分けです";
+			return;
+		}
+		else
+		{
+			var winnersName = string.Join("、", winners.Select(w => w.Name));
+			OutcomeMessage = $"{winnersName}の勝ちです！";
+		}
+	}
 
-    // ゲームを全て初期化する
-    void ResetGame()
-    {
-        Player1 = new JankenPlayer();
-        Computer = new JankenPlayer();
-        OutcomeMessage = "";
-        RecordList.Clear();
-        SelectedIndex = -1;
-    }
+	// ゲームを全て初期化する
+	void NewGame()
+	{
+		Player1 = new JankenPlayer("Player1");
+		Computer1 = new JankenPlayer("Computer1");
+		Computer2 = new JankenPlayer("Computer2");
+		jankenPlayers = new[] { Player1, Computer1, Computer2 };
+		OutcomeMessage = "";
+		RecordList.Clear();
+		SelectedIndex = -1;
+	}
 }
