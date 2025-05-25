@@ -1,10 +1,14 @@
 using JankenGame.Components;
+using JankenGame.Models.Janken;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddSingleton<JankenPlayerList>(sp
+    => new JankenPlayerList(new List<string> { "Player1", "Computer1", "Computer2" }));
 
 var app = builder.Build();
 

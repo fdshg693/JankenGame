@@ -19,5 +19,10 @@
             var record = new JankenRecord(winners);
             this.Add(record);
         }
+        public void ClearRecords()
+        {
+            this.Clear();
+        }
+
     }
 }

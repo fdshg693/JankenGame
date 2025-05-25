@@ -1,10 +1,14 @@
 ﻿@page "/janken"
 @using JankenGame.Models.Janken
 @rendermode InteractiveServer
+@inject JankenPlayerList jankenPlayers
 
 <h3>じゃんけんゲーム</h3>
 
-<p>Player1</p>
+<label for="playerName">プレイヤー名:</label>
+<input id="playerName" @bind="playerName" />
+<button class="btn btn-primary" @onclick="() => jankenPlayers.ChangePlayerName(0, playerName)">名前を設定</button>
+<p>こんにちは、@playerName さん</p>
 <div class="choices">
 	<button class="btn @(SelectedIndex == 0 ? "btn-primary" : "btn-secondary")" @onclick="() => SetHand(JankenHand.Rock)">✊  グー</button>
 	<button class="btn @(SelectedIndex == 1 ? "btn-primary" : "btn-secondary")" @onclick="() => SetHand(JankenHand.Paper)">✋  パー</button>
@@ -62,25 +66,38 @@
 }
 
 @code {
-	int SelectedIndex = -1;
-	string OutcomeMessage = "";
-	JankenPlayerList jankenPlayers = new JankenPlayerList(["Player1", "Computer1", "Computer2"]);
+	int SelectedIndex;
+	string OutcomeMessage = string.Empty;
+	string playerName = string.Empty;
+	int Player1Id;
+	int Computer1Id;
+	int Computer2Id;
 
 	JankenRecordList RecordList = new JankenRecordList();
 	Random rnd = new();
 	bool clicked = false;
+	bool _initialized = false;
 
 	IEnumerable<JankenRecord> RecentRecords => RecordList.OrderByDescending(r => r.Timestamp).Take(5);
 
 	protected override void OnInitialized()
 	{
-		NewGame();
+		if (!_initialized)
+		{
+			SelectedIndex = -1;
+			playerName = "Player1";
+			_initialized = true;
+			Player1Id = jankenPlayers.GetPlayerUniqueId("Player1");
+			Computer1Id = jankenPlayers.GetPlayerUniqueId("Computer1");
+			Computer2Id = jankenPlayers.GetPlayerUniqueId("Computer2");
+			_initialized = true;
+		}
 	}
 
 	void SetHand(JankenHand jankenHand)
 	{
 		if (clicked) return;
-		jankenPlayers.SetPlayerHand("Player1", jankenHand);
+		jankenPlayers.SetPlayerHand(Player1Id, jankenHand);
 		SelectedIndex = (int)jankenHand;
 	}
 
@@ -99,8 +116,8 @@
 		//　コンピューターの手をランダムに決定
 		var computer1Hand = (JankenHand)rnd.Next(0, 3);
 		var computer2Hand = (JankenHand)rnd.Next(0, 3);		
-		jankenPlayers.SetPlayerHand("Computer1", computer1Hand);
-		jankenPlayers.SetPlayerHand("Computer2", computer2Hand);
+		jankenPlayers.SetPlayerHand(Computer1Id, computer1Hand);
+		jankenPlayers.SetPlayerHand(Computer2Id, computer2Hand);
 
 		//　じゃんけんの結果を判定
 		var winners = JankenLogic.DetermineWinner(jankenPlayers);
@@ -120,7 +137,7 @@
 		clicked = false; // 5秒後にクリックを再度許可
 		SelectedIndex = -1; //ボタン表示を元に戻す
 		OutcomeMessage = ""; // メッセージを空にする
-		jankenPlayers = jankenPlayers.RecreateSelf();
+		jankenPlayers.RecreateSelf();
 	}
 
 	//　勝敗結果を元に、メッセージを表示
@@ -141,9 +158,9 @@
 	// ゲームを全て初期化する
 	void NewGame()
 	{
-		jankenPlayers = jankenPlayers.RecreateSelf();
+		jankenPlayers.RecreateSelf();
 		OutcomeMessage = "";
-		RecordList.Clear();
+		RecordList.ClearRecords();
 		SelectedIndex = -1;
 	}
 }
