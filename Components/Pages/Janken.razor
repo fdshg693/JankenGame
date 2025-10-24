@@ -1,5 +1,6 @@
 ﻿@page "/janken"
 @using JankenGame.Models.Janken
+@using JankenGame.Services.Janken
 @rendermode InteractiveServer
 
 <h3>じゃんけんゲーム</h3>
@@ -42,6 +43,7 @@
     JankenPlayer Computer = new JankenPlayer();
     JankenRecordList RecordList = new JankenRecordList();
     Random rnd = new();
+    JankenGameService gameService = new JankenGameService();
 
     IEnumerable<JankenRecord> RecentRecords => RecordList.OrderByDescending(r => r.Timestamp).Take(5);
 
@@ -64,25 +66,19 @@
             OutcomeMessage = "コンピューターの手を決定中...";
             return;
         }
-        if (Player.Hand == Computer.Hand)
+
+        // サービスから結果を取得
+        var result = gameService.DetermineWinner(Player.Hand.Value, Computer.Hand.Value);
+        RecordList.AddRecord(Player.Hand, Computer.Hand, result);
+
+        // メッセージを設定
+        OutcomeMessage = result switch
         {
-            OutcomeMessage = "引き分け！";
-            RecordList.AddRecord(Player.Hand, Computer.Hand, JankenResult.Draw);
-        }
-        else if (
-            (Player.Hand == JankenHand.Rock && Computer.Hand == JankenHand.Scissors) ||
-            (Player.Hand == JankenHand.Paper && Computer.Hand == JankenHand.Rock) ||
-            (Player.Hand == JankenHand.Scissors && Computer.Hand == JankenHand.Paper)
-        )
-        {
-            OutcomeMessage = "あなたの勝ち！🎉";
-            RecordList.AddRecord(Player.Hand, Computer.Hand, JankenResult.Win);
-        }
-        else
-        {
-            OutcomeMessage = "コンピューターの勝ち...";
-            RecordList.AddRecord(Player.Hand, Computer.Hand, JankenResult.Lose);
-        }
+            JankenResult.Win => "あなたの勝ち！🎉",
+            JankenResult.Lose => "コンピューターの勝ち...",
+            JankenResult.Draw => "引き分け！",
+            _ => "エラーが発生しました"
+        };
     }
 
     void ResetGame()

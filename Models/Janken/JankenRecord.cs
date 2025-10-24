@@ -1,18 +1,20 @@
 ﻿namespace JankenGame.Models.Janken
 {
-    public class JankenRecord
+    /// <summary>
+    /// ジャンケンゲームの1回のプレイ結果を表すレコード
+    /// </summary>
+    public sealed record JankenRecord(
+        JankenHand PlayerHand,
+        JankenHand ComputerHand,
+        JankenResult Outcome,
+        DateTime Timestamp)
     {
-        public JankenHand PlayerHand { get; set; }
-        public JankenHand ComputerHand { get; set; }
-        public JankenResult Outcome { get; set; }
-        public DateTime Timestamp { get; set; }
-
+        /// <summary>
+        /// 新しいJankenRecordインスタンスを作成します。タイムスタンプは現在時刻に設定されます。
+        /// </summary>
         public JankenRecord(JankenHand playerHand, JankenHand computerHand, JankenResult outcome)
+            : this(playerHand, computerHand, outcome, DateTime.Now)
         {
-            PlayerHand = playerHand;
-            ComputerHand = computerHand;
-            Outcome = outcome;
-            Timestamp = DateTime.Now;
         }
     }
 
