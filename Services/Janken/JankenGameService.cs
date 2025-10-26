@@ -7,6 +7,16 @@ namespace JankenGame.Services.Janken
     /// </summary>
     public class JankenGameService
     {
+        private readonly JankenLogicService _logicService;
+
+        /// <summary>
+        /// コンストラクター
+        /// </summary>
+        public JankenGameService()
+        {
+            _logicService = new JankenLogicService();
+        }
+
         /// <summary>
         /// プレイヤーとコンピューターの手から勝敗を判定します
         /// </summary>
@@ -15,20 +25,7 @@ namespace JankenGame.Services.Janken
         /// <returns>ゲーム結果</returns>
         public JankenResult DetermineWinner(JankenHand playerHand, JankenHand computerHand)
         {
-            if (playerHand == computerHand)
-            {
-                return JankenResult.Draw;
-            }
-
-            // プレイヤーが勝つパターン
-            if ((playerHand == JankenHand.Rock && computerHand == JankenHand.Scissors) ||
-                (playerHand == JankenHand.Paper && computerHand == JankenHand.Rock) ||
-                (playerHand == JankenHand.Scissors && computerHand == JankenHand.Paper))
-            {
-                return JankenResult.Win;
-            }
-
-            return JankenResult.Lose;
+            return _logicService.DetermineResult(playerHand, computerHand);
         }
     }
 }

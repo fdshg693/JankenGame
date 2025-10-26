@@ -8,6 +8,15 @@ namespace JankenGame.Services.Janken
     public class JankenChallengeService
     {
         private readonly Random _random = new();
+        private readonly JankenLogicService _logicService;
+
+        /// <summary>
+        /// コンストラクター
+        /// </summary>
+        public JankenChallengeService()
+        {
+            _logicService = new JankenLogicService();
+        }
 
         /// <summary>
         /// ランダムにコンピューターの手を生成する
@@ -26,10 +35,7 @@ namespace JankenGame.Services.Janken
         /// <returns>プレイヤーが勝つ手を選んだ場合はtrue</returns>
         public bool IsCorrectAnswer(JankenHand playerHand, JankenHand computerHand)
         {
-            // プレイヤーの手がコンピューターに勝つパターンをチェック
-            return (playerHand == JankenHand.Rock && computerHand == JankenHand.Scissors) ||
-                   (playerHand == JankenHand.Paper && computerHand == JankenHand.Rock) ||
-                   (playerHand == JankenHand.Scissors && computerHand == JankenHand.Paper);
+            return _logicService.IsWinning(playerHand, computerHand);
         }
 
         /// <summary>
@@ -39,13 +45,7 @@ namespace JankenGame.Services.Janken
         /// <returns>勝つ手</returns>
         public JankenHand GetWinningHand(JankenHand computerHand)
         {
-            return computerHand switch
-            {
-                JankenHand.Rock => JankenHand.Paper,
-                JankenHand.Paper => JankenHand.Scissors,
-                JankenHand.Scissors => JankenHand.Rock,
-                _ => throw new ArgumentException("無効な手です", nameof(computerHand))
-            };
+            return _logicService.GetWinningHand(computerHand);
         }
     }
 }
