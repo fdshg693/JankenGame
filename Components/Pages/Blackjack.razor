@@ -3,7 +3,7 @@
 @using JankenGame.Services.BlackJack
 @rendermode InteractiveServer
 
-<h3>ブラックジャック</h3>
+<h3>ブラックジャック（チップベッティング）</h3>
 
 @if (!GameInitialized)
 {
@@ -22,11 +22,23 @@
 }
 else
 {
+    <!-- ポット情報 -->
+    @if (GameStarted)
+    {
+        <div class="pot-display">
+            <h4>ポット情報</h4>
+            <p>総ポット: <strong>@gameService.Pot チップ</strong></p>
+            <p>現在のベット: <strong>@gameService.CurrentBet チップ</strong></p>
+        </div>
+    }
+
     <div class="stats-board">
         @foreach (var player in gameService.Players)
         {
             <section class="player-stats">
                 <h4>@player.Name 統計</h4>
+                <p>所持チップ: <strong>@player.Chips</strong></p>
+                <p>現在のベット: <strong>@player.CurrentBet</strong></p>
                 <p>勝利: @player.Wins</p>
                 <p>敗北: @player.Losses</p>
                 <p>引き分け: @player.Draws</p>
@@ -54,22 +66,36 @@ else
                     <div class="card">@card.Name</div>
                 }
             </div>
-            <p class="score">スコア: @Dealer.Score</p>
+            @if (Dealer.Cards.Any())
+            {
+                <p class="score">スコア: @Dealer.Score</p>
+            }
         </section>
 
         <div class="players-section">
             @foreach (var player in gameService.Players)
             {
-                <section class="player-section @(IsCurrentPlayer(player) ? "current-player" : "")">
-                    <h4>@player.Name @(IsCurrentPlayer(player) ? "★" : "")</h4>
+                var isCurrent = IsCurrentPlayer(player);
+                var playerClass = isCurrent ? "current-player" : "";
+                if (player.HasFolded) playerClass += " folded-player";
+                
+                <section class="player-section @playerClass">
+                    <h4>@player.Name @(isCurrent ? "★" : "") @(player.HasFolded ? "（フォールド）" : "")</h4>
+                    <div class="chips-display">
+                        <p>チップ: @player.Chips</p>
+                        <p>ベット: @player.CurrentBet</p>
+                    </div>
                     <div class="cards-container">
                         @foreach (var card in player.Cards)
                         {
                             <div class="card">@card.Name</div>
                         }
                     </div>
-                    <p class="score">スコア: @player.Score</p>
-                    @if (GameOver)
+                    @if (player.Cards.Any() && !player.HasFolded)
+                    {
+                        <p class="score">スコア: @player.Score</p>
+                    }
+                    @if (GameOver && !player.HasFolded)
                     {
                         <p class="result-message">@GetResultMessage(player)</p>
                     }
@@ -83,6 +109,39 @@ else
         {
             <button @onclick="StartGame">ゲーム開始</button>
         }
+        else if (IsBettingRound)
+        {
+            <p class="turn-message">@gameService.CurrentPlayer?.Name のベット</p>
+            <div class="betting-controls">
+                <button @onclick="Fold" class="fold-btn">フォールド</button>
+                
+                @if (GetMinimumBet() > 0)
+                {
+                    <button @onclick="Call" class="call-btn">
+                        コール (@GetMinimumBet() チップ)
+                    </button>
+                }
+                else
+                {
+                    <button @onclick="Check" class="check-btn">チェック</button>
+                }
+                
+                <div class="raise-section">
+                    <button @onclick="ShowRaiseInput" class="raise-btn">レイズ</button>
+                    @if (showRaiseInput)
+                    {
+                        <div class="raise-input-group">
+                            <input type="number" @bind="raiseAmount" min="@GetMinimumRaiseAmount()" 
+                                   max="@GetMaxRaise()" class="raise-input" />
+                            <button @onclick="Raise">決定</button>
+                            <button @onclick="() => showRaiseInput = false">キャンセル</button>
+                        </div>
+                    }
+                </div>
+                
+                <button @onclick="AllIn" class="allin-btn">オールイン</button>
+            </div>
+        }
         else if (IsPlayerTurn)
         {
             <p class="turn-message">@gameService.CurrentPlayer?.Name のターン</p>
@@ -95,7 +154,7 @@ else
         }
         else
         {
-            <p class="turn-message">ディーラーのターン...</p>
+            <p class="turn-message">@GetStateMessage()</p>
         }
     </div>
 }
@@ -103,6 +162,8 @@ else
 @code {
     BlackJackGameService gameService = null!;
     bool GameInitialized = false;
+    bool showRaiseInput = false;
+    int raiseAmount = 0;
 
     protected override void OnInitialized()
     {
@@ -124,20 +185,106 @@ else
 
     BlackJackDealer Dealer => gameService.Dealer;
     bool GameStarted => gameService.GameState != BlackJackGameState.Waiting;
-    bool GameOver => gameService.GameState == BlackJackGameState.GameOver;
+    bool GameOver => gameService.GameState == BlackJackGameState.GameOver || gameService.GameState == BlackJackGameState.Showdown;
     bool IsPlayerTurn => gameService.GameState == BlackJackGameState.PlayersTurn;
+    bool IsBettingRound => gameService.GameState == BlackJackGameState.BettingRound;
 
     bool IsCurrentPlayer(BlackJackPlayer player) 
-        => gameService.CurrentPlayer == player && IsPlayerTurn;
+        => gameService.CurrentPlayer == player && (IsPlayerTurn || IsBettingRound);
 
     string GetResultMessage(BlackJackPlayer player) 
         => gameService.GetResultMessage(player);
+
+    string GetStateMessage()
+    {
+        return gameService.GameState switch
+        {
+            BlackJackGameState.Ante => "アンティを支払っています...",
+            BlackJackGameState.InitialDeal => "カードを配っています...",
+            BlackJackGameState.DealerTurn => "ディーラーのターン...",
+            BlackJackGameState.Showdown => "精算中...",
+            _ => ""
+        };
+    }
 
     void StartGame()
     {
         gameService.StartGame();
     }
 
+    // ベッティング関連メソッド
+    void Fold()
+    {
+        if (IsBettingRound)
+        {
+            gameService.PlaceBet(0, BettingAction.Fold);
+        }
+    }
+
+    void Call()
+    {
+        if (IsBettingRound)
+        {
+            int callAmount = gameService.GetMinimumBet();
+            gameService.PlaceBet(gameService.CurrentBet, BettingAction.Call);
+        }
+    }
+
+    void Check()
+    {
+        if (IsBettingRound)
+        {
+            gameService.PlaceBet(0, BettingAction.Check);
+        }
+    }
+
+    void ShowRaiseInput()
+    {
+        showRaiseInput = true;
+        raiseAmount = GetMinimumRaiseAmount();
+    }
+
+    void Raise()
+    {
+        if (IsBettingRound && raiseAmount >= GetMinimumRaiseAmount())
+        {
+            gameService.PlaceBet(raiseAmount, BettingAction.Raise);
+            showRaiseInput = false;
+        }
+    }
+
+    void AllIn()
+    {
+        if (IsBettingRound && gameService.CurrentPlayer != null)
+        {
+            gameService.PlaceBet(gameService.CurrentPlayer.Chips, BettingAction.AllIn);
+        }
+    }
+
+    int GetMinimumBet()
+    {
+        return gameService.GetMinimumBet();
+    }
+
+    int GetMinimumRaiseAmount()
+    {
+        if (gameService.CurrentPlayer == null)
+            return 0;
+
+        int currentBet = gameService.CurrentBet;
+        int minimumRaise = gameService.BettingService.GetMinimumRaise();
+        return currentBet + minimumRaise;
+    }
+
+    int GetMaxRaise()
+    {
+        if (gameService.CurrentPlayer == null)
+            return 0;
+
+        return gameService.CurrentPlayer.Chips + gameService.CurrentPlayer.CurrentBet;
+    }
+
+    // カードアクション
     void Hit()
     {
         if (IsPlayerTurn)

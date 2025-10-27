@@ -11,7 +11,22 @@ namespace JankenGame.Models.BlackJack
         Waiting,
 
         /// <summary>
-        /// プレイヤーターン
+        /// アンティ（入場料）支払い
+        /// </summary>
+        Ante,
+
+        /// <summary>
+        /// 初期配牌
+        /// </summary>
+        InitialDeal,
+
+        /// <summary>
+        /// ベッティング中
+        /// </summary>
+        BettingRound,
+
+        /// <summary>
+        /// プレイヤーのカードアクション（ヒット/スタンド）
         /// </summary>
         PlayersTurn,
 
@@ -19,6 +34,11 @@ namespace JankenGame.Models.BlackJack
         /// ディーラーターン
         /// </summary>
         DealerTurn,
+
+        /// <summary>
+        /// 結果表示と精算
+        /// </summary>
+        Showdown,
 
         /// <summary>
         /// ゲーム終了

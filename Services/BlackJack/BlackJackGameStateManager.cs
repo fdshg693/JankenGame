@@ -101,5 +101,38 @@ namespace JankenGame.Services.BlackJack
         {
             GameState = BlackJackGameState.GameOver;
         }
+
+        /// <summary>
+        /// アンティ状態に設定
+        /// </summary>
+        public void StartAnte()
+        {
+            GameState = BlackJackGameState.Ante;
+        }
+
+        /// <summary>
+        /// 初期配牌状態に設定
+        /// </summary>
+        public void StartInitialDeal()
+        {
+            GameState = BlackJackGameState.InitialDeal;
+        }
+
+        /// <summary>
+        /// ベッティングラウンド開始
+        /// </summary>
+        public void StartBettingRound()
+        {
+            CurrentPlayerIndex = 0;
+            GameState = BlackJackGameState.BettingRound;
+        }
+
+        /// <summary>
+        /// 精算状態に設定
+        /// </summary>
+        public void StartShowdown()
+        {
+            GameState = BlackJackGameState.Showdown;
+        }
     }
 }
