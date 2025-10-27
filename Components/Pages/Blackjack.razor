@@ -1,7 +1,7 @@
 ﻿@page "/blackjack"
 @using JankenGame.Models
 @using JankenGame.Models.BlackJack
-@using JankenGame.Models.BlackJack
+@using JankenGame.Services.BlackJack
 @rendermode InteractiveServer
 
 <h3>ブラックジャック</h3>
@@ -45,36 +45,44 @@
 
 @code {
     bool GameStarted, GameOver;
-    string ResultMessage;
-    Deck deck;
-    Hand Player;
-    Hand Dealer;
+    string ResultMessage = "";
+    Hand Player = null!;
+    Hand Dealer = null!;
+    
+    BlackJackGameService gameService = null!;
+    BlackJackLogicService logicService = null!;
 
     protected override void OnInitialized()
     {
-        deck = new Deck();
+        gameService = new BlackJackGameService();
+        logicService = new BlackJackLogicService();
+        
         Player = new Hand();
         Dealer = new Hand();
         GameStarted = false;
         GameOver = false;
-        ResultMessage = "";        
-
-        CheckForBlackjack();
+        ResultMessage = "";
     }
 
     void StartGame()
     {                
         // 初期配牌
-        Player.Add(deck.Draw());
-        Player.Add(deck.Draw());
-        Dealer.Add(deck.Draw());
-        Dealer.Add(deck.Draw());
+        Player.Add(gameService.DrawCard());
+        Player.Add(gameService.DrawCard());
+        Dealer.Add(gameService.DrawCard());
+        Dealer.Add(gameService.DrawCard());
         GameStarted = true;
+        
+        // ブラックジャックチェック
+        if (logicService.IsBlackjack(Player.Score, Player.Cards.Count))
+        {
+            EndGame();
+        }
     }
 
     void Hit()
     {
-        Player.Add(deck.Draw());
+        Player.Add(gameService.DrawCard());
         if (Player.IsBust)
             EndGame();
     }
@@ -82,38 +90,29 @@
     void Stand()
     {
         // ディーラーのターン
-        while (Dealer.Score < 17)
-            Dealer.Add(deck.Draw());
+        while (logicService.ShouldDealerHit(Dealer.Score))
+        {
+            Dealer.Add(gameService.DrawCard());
+        }
         EndGame();
-    }
-
-    void CheckForBlackjack()
-    {
-        if (Player.Score == 21)
-            EndGame();
     }
 
     void EndGame()
     {
         GameOver = true;
-        // プレイヤーバースト
-        if (Player.IsBust)
-            ResultMessage = "あなたはバースト！ディーラーの勝ち…";
-        // ディーラーバースト
-        else if (Dealer.IsBust)
-            ResultMessage = "ディーラーがバースト！あなたの勝ち🎉";
-        else if (Player.Score > Dealer.Score)
-            ResultMessage = "あなたの勝ち🎉";
-        else if (Player.Score < Dealer.Score)
-            ResultMessage = "ディーラーの勝ち…";
-        else
-            ResultMessage = "引き分け（プッシュ）";
+        ResultMessage = logicService.DetermineWinner(
+            Player.Score, 
+            Dealer.Score, 
+            Player.IsBust, 
+            Dealer.IsBust
+        );
     }
 
     void Reset()
     {
         GameStarted = false;
         GameOver = false;
+        gameService.ReturnCards(Player, Dealer);
         Player.ResetCards();
         Dealer.ResetCards();
     }
