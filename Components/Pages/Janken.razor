@@ -128,12 +128,12 @@
     {
         Players.Clear();
         // ユーザー（最初のプレイヤー）
-        Players.Add(new JankenPlayer("あなた", PlayerType.Human));
+        Players.Add(new JankenPlayer("あなた", JankenPlayerType.Human));
         
         // コンピューターのプレイヤー
         for (int i = 1; i < selectedPlayerCount; i++)
         {
-            Players.Add(new JankenPlayer($"コンピューター{i}", PlayerType.Computer));
+            Players.Add(new JankenPlayer($"コンピューター{i}", JankenPlayerType.Computer));
         }
     }
 

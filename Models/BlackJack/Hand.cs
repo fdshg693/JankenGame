@@ -1,6 +1,6 @@
 ﻿namespace JankenGame.Models.BlackJack
 {
-    public class Hand
+    public class BlackJackHand
     {
         public List<Card> Cards { get; private set; } = new();
 

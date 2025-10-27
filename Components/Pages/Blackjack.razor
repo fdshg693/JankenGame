@@ -6,9 +6,29 @@
 
 <h3>ブラックジャック</h3>
 
+<div class="stats-board">
+    <section class="player-stats">
+        <h4>プレイヤー統計</h4>
+        <p>勝利: @Player.Wins</p>
+        <p>敗北: @Player.Losses</p>
+        <p>引き分け: @Player.Draws</p>
+        <p>総ゲーム数: @Player.TotalGames</p>
+        <p>勝率: @Player.WinRate.ToString("F1")%</p>
+    </section>
+
+    <section class="dealer-stats">
+        <h4>ディーラー統計</h4>
+        <p>勝利: @Dealer.Wins</p>
+        <p>敗北: @Dealer.Losses</p>
+        <p>引き分け: @Dealer.Draws</p>
+        <p>総ゲーム数: @Dealer.TotalGames</p>
+        <p>勝率: @Dealer.WinRate.ToString("F1")%</p>
+    </section>
+</div>
+
 <div class="game-board">
     <section>
-        <h4>ディーラー</h4>
+        <h4>@Dealer.Name</h4>
         @foreach (var card in Dealer.Cards)
         {
             <div class="card">@card.Name</div>
@@ -17,7 +37,7 @@
     </section>
 
     <section>
-        <h4>プレイヤー</h4>
+        <h4>@Player.Name</h4>
         @foreach (var card in Player.Cards)
         {
             <div class="card">@card.Name</div>
@@ -46,8 +66,8 @@
 @code {
     bool GameStarted, GameOver;
     string ResultMessage = "";
-    Hand Player = null!;
-    Hand Dealer = null!;
+    BlackJackPlayer Player = null!;
+    BlackJackDealer Dealer = null!;
     
     BlackJackGameService gameService = null!;
     BlackJackLogicService logicService = null!;
@@ -57,8 +77,8 @@
         gameService = new BlackJackGameService();
         logicService = new BlackJackLogicService();
         
-        Player = new Hand();
-        Dealer = new Hand();
+        Player = new BlackJackPlayer();
+        Dealer = new BlackJackDealer();
         GameStarted = false;
         GameOver = false;
         ResultMessage = "";
@@ -67,10 +87,10 @@
     void StartGame()
     {                
         // 初期配牌
-        Player.Add(gameService.DrawCard());
-        Player.Add(gameService.DrawCard());
-        Dealer.Add(gameService.DrawCard());
-        Dealer.Add(gameService.DrawCard());
+        Player.Cards.Add(gameService.DrawCard());
+        Player.Cards.Add(gameService.DrawCard());
+        Dealer.Cards.Add(gameService.DrawCard());
+        Dealer.Cards.Add(gameService.DrawCard());
         GameStarted = true;
         
         // ブラックジャックチェック
@@ -82,7 +102,7 @@
 
     void Hit()
     {
-        Player.Add(gameService.DrawCard());
+        Player.Cards.Add(gameService.DrawCard());
         if (Player.IsBust)
             EndGame();
     }
@@ -92,7 +112,7 @@
         // ディーラーのターン
         while (logicService.ShouldDealerHit(Dealer.Score))
         {
-            Dealer.Add(gameService.DrawCard());
+            Dealer.Cards.Add(gameService.DrawCard());
         }
         EndGame();
     }
@@ -106,6 +126,26 @@
             Player.IsBust, 
             Dealer.IsBust
         );
+        RecordResult(ResultMessage);
+    }
+
+    void RecordResult(string result)
+    {
+        if (result.Contains("プレイヤー"))
+        {
+            Player.RecordWin();
+            Dealer.RecordLoss();
+        }
+        else if (result.Contains("ディーラー"))
+        {
+            Player.RecordLoss();
+            Dealer.RecordWin();
+        }
+        else
+        {
+            Player.RecordDraw();
+            Dealer.RecordDraw();
+        }
     }
 
     void Reset()

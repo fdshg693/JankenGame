@@ -39,7 +39,16 @@ namespace JankenGame.Services.BlackJack
         /// <summary>
         /// ゲームをリセット（カードを場から回収）
         /// </summary>
-        public void ReturnCards(Hand player, Hand dealer)
+        public void ReturnCards(BlackJackPlayer player, BlackJackDealer dealer)
+        {
+            // 場にあるカードをクリア（実際は回収されたものとして扱う）
+            _cardsInPlay.Clear();
+        }
+
+        /// <summary>
+        /// ゲームをリセット（カードを場から回収）- BlackJackHand版（互換性のため残す）
+        /// </summary>
+        public void ReturnCards(BlackJackHand player, BlackJackHand dealer)
         {
             // 場にあるカードをクリア（実際は回収されたものとして扱う）
             _cardsInPlay.Clear();
