@@ -18,17 +18,6 @@ namespace JankenGame.Services.Janken
         }
 
         /// <summary>
-        /// プレイヤーとコンピューターの手から勝敗を判定します
-        /// </summary>
-        /// <param name="playerHand">プレイヤーの手</param>
-        /// <param name="computerHand">コンピューターの手</param>
-        /// <returns>ゲーム結果</returns>
-        public JankenResultEnum DetermineWinner(JankenHand playerHand, JankenHand computerHand)
-        {
-            return _logicService.DetermineResult(playerHand, computerHand);
-        }
-
-        /// <summary>
         /// 複数プレイヤーのジャンケン結果を判定します
         /// </summary>
         /// <param name="players">プレイヤー一覧</param>

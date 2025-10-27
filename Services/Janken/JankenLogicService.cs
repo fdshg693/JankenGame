@@ -69,18 +69,6 @@ namespace JankenGame.Services.Janken
         }
 
         /// <summary>
-        /// 2つの手から勝敗を判定します
-        /// </summary>
-        /// <param name="playerHand">プレイヤーの手</param>
-        /// <param name="opponentHand">相手の手</param>
-        /// <returns>プレイヤーから見た勝敗結果</returns>
-        public JankenResultEnum DetermineResult(JankenHand playerHand, JankenHand opponentHand)
-        {
-            var gameResult = GetWinningHands(playerHand, opponentHand);
-            return gameResult.ToPlayerResult(playerHand);
-        }
-
-        /// <summary>
         /// プレイヤーの手が相手の手に勝つかどうかを判定します
         /// </summary>
         /// <param name="playerHand">プレイヤーの手</param>
