@@ -3,61 +3,36 @@ using JankenGame.Models.BlackJack;
 namespace JankenGame.Services.BlackJack
 {
     /// <summary>
-    /// ブラックジャックのゲーム状態管理とデッキ管理を行うサービス
+    /// ブラックジャックのゲーム進行を統合管理するサービス
+    /// DeckManager、StateManager、LogicServiceを利用してゲーム全体を制御
     /// </summary>
     public class BlackJackGameService
     {
-        private Deck _deck;
-        private readonly List<Card> _cardsInPlay = new();
+        private readonly BlackJackDeckManager _deckManager;
+        private readonly BlackJackGameStateManager _stateManager;
         private readonly BlackJackLogicService _logicService;
 
-        // ゲーム状態管理
-        public BlackJackGameState GameState { get; private set; }
-        public List<BlackJackPlayer> Players { get; private set; }
-        public BlackJackDealer Dealer { get; private set; }
-        public int CurrentPlayerIndex { get; private set; }
-        public BlackJackPlayer? CurrentPlayer => 
-            CurrentPlayerIndex >= 0 && CurrentPlayerIndex < Players.Count 
-                ? Players[CurrentPlayerIndex] 
-                : null;
+        // ゲーム状態への公開プロパティ（StateManagerへの委譲）
+        public BlackJackGameState GameState => _stateManager.GameState;
+        public List<BlackJackPlayer> Players => _stateManager.Players;
+        public BlackJackDealer Dealer => _stateManager.Dealer;
+        public int CurrentPlayerIndex => _stateManager.CurrentPlayerIndex;
+        public BlackJackPlayer? CurrentPlayer => _stateManager.CurrentPlayer;
 
         public BlackJackGameService()
         {
-            _deck = new Deck();
+            _deckManager = new BlackJackDeckManager();
+            _stateManager = new BlackJackGameStateManager();
             _logicService = new BlackJackLogicService();
-            Players = new List<BlackJackPlayer>();
-            Dealer = new BlackJackDealer();
-            GameState = BlackJackGameState.Waiting;
-            CurrentPlayerIndex = -1;
         }
 
-        /// <summary>
-        /// カードを引く（デッキが空になったら再構築）
-        /// </summary>
-        public Card DrawCard()
-        {
-            Card card;
-            try
-            {
-                card = _deck.Draw();
-            }
-            catch (InvalidOperationException)
-            {
-                // デッキが空になったら、場にあるカードを除いて再構築
-                RebuildDeck();
-                card = _deck.Draw();
-            }
-            
-            _cardsInPlay.Add(card);
-            return card;
-        }
 
         /// <summary>
         /// プレイヤーを追加
         /// </summary>
         public void AddPlayer(BlackJackPlayer player)
         {
-            Players.Add(player);
+            _stateManager.AddPlayer(player);
         }
 
         /// <summary>
@@ -68,25 +43,25 @@ namespace JankenGame.Services.BlackJack
             if (Players.Count == 0)
                 throw new InvalidOperationException("プレイヤーが登録されていません");
 
-            GameState = BlackJackGameState.PlayersTurn;
-            CurrentPlayerIndex = 0;
+            _stateManager.StartPlayersTurn();
 
             // 各プレイヤーに2枚配る
             foreach (var player in Players)
             {
                 player.ResetCards();
-                player.Cards.Add(DrawCard());
-                player.Cards.Add(DrawCard());
+                player.Cards.Add(_deckManager.DrawCard());
+                player.Cards.Add(_deckManager.DrawCard());
             }
 
             // ディーラーに2枚配る
             Dealer.ResetCards();
-            Dealer.Cards.Add(DrawCard());
-            Dealer.Cards.Add(DrawCard());
+            Dealer.Cards.Add(_deckManager.DrawCard());
+            Dealer.Cards.Add(_deckManager.DrawCard());
 
             // 最初のプレイヤーがブラックジャックなら次へ
             CheckCurrentPlayerBlackjackOrBust();
         }
+
 
         /// <summary>
         /// 現在のプレイヤーがヒット
@@ -96,7 +71,7 @@ namespace JankenGame.Services.BlackJack
             if (GameState != BlackJackGameState.PlayersTurn || CurrentPlayer == null)
                 throw new InvalidOperationException("現在はヒットできません");
 
-            CurrentPlayer.Cards.Add(DrawCard());
+            CurrentPlayer.Cards.Add(_deckManager.DrawCard());
 
             // バストチェック
             if (CurrentPlayer.IsBust)
@@ -121,9 +96,9 @@ namespace JankenGame.Services.BlackJack
         /// </summary>
         private void MoveToNextPlayer()
         {
-            CurrentPlayerIndex++;
+            bool allPlayersFinished = _stateManager.MoveToNextPlayer();
 
-            if (CurrentPlayerIndex >= Players.Count)
+            if (allPlayersFinished)
             {
                 // 全プレイヤー終了 → ディーラーのターン
                 StartDealerTurn();
@@ -134,6 +109,7 @@ namespace JankenGame.Services.BlackJack
                 CheckCurrentPlayerBlackjackOrBust();
             }
         }
+
 
         /// <summary>
         /// 現在のプレイヤーがブラックジャックまたはバストなら自動的に次へ
@@ -154,11 +130,10 @@ namespace JankenGame.Services.BlackJack
         /// </summary>
         private void StartDealerTurn()
         {
-            GameState = BlackJackGameState.DealerTurn;
+            _stateManager.StartDealerTurn();
 
             // 全プレイヤーがバストしていたらディーラーは引かない
-            bool allPlayersBust = Players.All(p => p.IsBust);
-            if (allPlayersBust)
+            if (_stateManager.AreAllPlayersBust())
             {
                 EndGame();
                 return;
@@ -167,7 +142,7 @@ namespace JankenGame.Services.BlackJack
             // ディーラーは17以上になるまで引く
             while (_logicService.ShouldDealerHit(Dealer.Score))
             {
-                Dealer.Cards.Add(DrawCard());
+                Dealer.Cards.Add(_deckManager.DrawCard());
             }
 
             EndGame();
@@ -178,7 +153,7 @@ namespace JankenGame.Services.BlackJack
         /// </summary>
         private void EndGame()
         {
-            GameState = BlackJackGameState.GameOver;
+            _stateManager.EndGame();
 
             // 各プレイヤーの勝敗を判定
             foreach (var player in Players)
@@ -193,6 +168,7 @@ namespace JankenGame.Services.BlackJack
                 RecordResult(player, result);
             }
         }
+
 
         /// <summary>
         /// 結果を記録
@@ -234,19 +210,11 @@ namespace JankenGame.Services.BlackJack
         /// </summary>
         public void ResetGame()
         {
-            // 場にあるカードをクリア
-            _cardsInPlay.Clear();
+            // デッキマネージャーでカードをクリア
+            _deckManager.ClearCardsInPlay();
 
-            // 全プレイヤーのカードをリセット
-            foreach (var player in Players)
-            {
-                player.ResetCards();
-            }
-            Dealer.ResetCards();
-
-            // 状態をリセット
-            GameState = BlackJackGameState.Waiting;
-            CurrentPlayerIndex = -1;
+            // 状態マネージャーでゲームをリセット
+            _stateManager.ResetGame();
         }
 
         /// <summary>
@@ -254,7 +222,7 @@ namespace JankenGame.Services.BlackJack
         /// </summary>
         public void ReturnCards(BlackJackPlayer player, BlackJackDealer dealer)
         {
-            _cardsInPlay.Clear();
+            _deckManager.ClearCardsInPlay();
         }
 
         /// <summary>
@@ -262,25 +230,7 @@ namespace JankenGame.Services.BlackJack
         /// </summary>
         public void ReturnCards(BlackJackHand player, BlackJackHand dealer)
         {
-            // 場にあるカードをクリア（実際は回収されたものとして扱う）
-            _cardsInPlay.Clear();
-        }
-
-        /// <summary>
-        /// デッキを再構築（場にあるカードを除く）
-        /// </summary>
-        private void RebuildDeck()
-        {
-            // 全カードを生成
-            var allCards = Deck.CreateAllCards();
-
-            // 場にあるカードを除外
-            var availableCards = allCards
-                .Where(card => !_cardsInPlay.Any(inPlay => 
-                    inPlay.Suit == card.Suit && inPlay.Rank == card.Rank))
-                .ToList();
-
-            _deck = new Deck(availableCards);
+            _deckManager.ClearCardsInPlay();
         }
     }
 }
