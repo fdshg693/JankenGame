@@ -76,23 +76,8 @@ namespace JankenGame.Services.Janken
         /// <returns>プレイヤーから見た勝敗結果</returns>
         public JankenResultEnum DetermineResult(JankenHand playerHand, JankenHand opponentHand)
         {
-            // コアロジックを使用して判定
             var gameResult = GetWinningHands(playerHand, opponentHand);
-
-            // 引き分け
-            if (!gameResult.ExistsWinner)
-            {
-                return JankenResultEnum.Draw;
-            }
-
-            // プレイヤーの手が勝った手と一致する場合は勝ち
-            if (gameResult.WinningHand == playerHand)
-            {
-                return JankenResultEnum.Win;
-            }
-
-            // それ以外は負け
-            return JankenResultEnum.Lose;
+            return gameResult.ToPlayerResult(playerHand);
         }
 
         /// <summary>
@@ -103,9 +88,8 @@ namespace JankenGame.Services.Janken
         /// <returns>プレイヤーが勝つ場合はtrue</returns>
         public bool IsWinning(JankenHand playerHand, JankenHand opponentHand)
         {
-            // コアロジックを使用して判定
             var gameResult = GetWinningHands(playerHand, opponentHand);
-            return gameResult.ExistsWinner && gameResult.WinningHand == playerHand;
+            return gameResult.ToPlayerResult(playerHand) == JankenResultEnum.Win;
         }
     }
 }

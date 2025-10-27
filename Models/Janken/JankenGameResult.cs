@@ -44,5 +44,24 @@ namespace JankenGame.Models.Janken
         {
             return new JankenGameResult(true, winningHand);
         }
+
+        /// <summary>
+        /// プレイヤー視点の勝敗結果を取得します
+        /// </summary>
+        /// <param name="playerHand">プレイヤーの手</param>
+        /// <returns>プレイヤーから見た勝敗結果</returns>
+        public JankenResultEnum ToPlayerResult(JankenHand playerHand)
+        {
+            // 勝者がいない場合は引き分け
+            if (!ExistsWinner)
+            {
+                return JankenResultEnum.Draw;
+            }
+
+            // プレイヤーの手が勝った手と一致する場合は勝ち
+            return WinningHand == playerHand
+                ? JankenResultEnum.Win
+                : JankenResultEnum.Lose;
+        }
     }
 }
