@@ -6,13 +6,13 @@
     public sealed record JankenRecord(
         JankenHand PlayerHand,
         JankenHand ComputerHand,
-        JankenResult Outcome,
+        JankenResultEnum Outcome,
         DateTime Timestamp)
     {
         /// <summary>
         /// 新しいJankenRecordインスタンスを作成します。タイムスタンプは現在時刻に設定されます。
         /// </summary>
-        public JankenRecord(JankenHand playerHand, JankenHand computerHand, JankenResult outcome)
+        public JankenRecord(JankenHand playerHand, JankenHand computerHand, JankenResultEnum outcome)
             : this(playerHand, computerHand, outcome, DateTime.Now)
         {
         }
@@ -20,7 +20,7 @@
 
     public class JankenRecordList : List<JankenRecord>
     {
-        public void AddRecord(JankenHand? playerHand, JankenHand? computerHand, JankenResult outcome)
+        public void AddRecord(JankenHand? playerHand, JankenHand? computerHand, JankenResultEnum outcome)
         {
             if (playerHand == null)
             {
@@ -33,8 +33,8 @@
             var record = new JankenRecord(playerHand.Value, computerHand.Value, outcome);
             this.Add(record);
         }
-        public int TotalWins => this.Count(r => r.Outcome == JankenResult.Win);
-        public int TotalLosses => this.Count(r => r.Outcome == JankenResult.Lose);
-        public int TotalDraws => this.Count(r => r.Outcome == JankenResult.Draw);
+        public int TotalWins => this.Count(r => r.Outcome == JankenResultEnum.Win);
+        public int TotalLosses => this.Count(r => r.Outcome == JankenResultEnum.Lose);
+        public int TotalDraws => this.Count(r => r.Outcome == JankenResultEnum.Draw);
     }
 }

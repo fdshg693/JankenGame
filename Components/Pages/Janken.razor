@@ -1,4 +1,4 @@
-﻿@page "/janken"
+@page "/janken"
 @using JankenGame.Models.Janken
 @using JankenGame.Services.Janken
 @rendermode InteractiveServer
@@ -74,9 +74,9 @@
         // メッセージを設定
         OutcomeMessage = result switch
         {
-            JankenResult.Win => "あなたの勝ち！🎉",
-            JankenResult.Lose => "コンピューターの勝ち...",
-            JankenResult.Draw => "引き分け！",
+            JankenResultEnum.Win => "あなたの勝ち！🎉",
+            JankenResultEnum.Lose => "コンピューターの勝ち...",
+            JankenResultEnum.Draw => "引き分け！",
             _ => "エラーが発生しました"
         };
     }

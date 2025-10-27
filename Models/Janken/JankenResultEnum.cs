@@ -2,7 +2,7 @@
 
 namespace JankenGame.Models.Janken
 {
-    public enum JankenResult
+    public enum JankenResultEnum
     {
         [Description("勝ち")]
         Win = 1,
