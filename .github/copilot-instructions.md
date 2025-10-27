@@ -17,7 +17,7 @@ This is a Blazor Server web application built with ASP.NET Core 9.0 and C# 13, f
 ```
 Components/Pages/     - Razor pages with @rendermode InteractiveServer
 Models/              - Game logic models (Janken, BlackJack)
-Services/Janken/     - Game services (logic, state management)
+Services/            - Game services (Janken, BlackJack)
 wwwroot/             - Static assets (CSS, Bootstrap)
 ```
 
@@ -37,9 +37,12 @@ wwwroot/             - Static assets (CSS, Bootstrap)
    - Tracks accuracy, play count, correct/wrong answers
 
 ### Blackjack (`/blackjack`)
-   - Classic 21 card game
-   - Models: `Card`, `Deck`, `Hand`
-   - Simple hit/stand mechanics
+   - Multiplayer support (1-5 players)
+   - Models: `BlackJackParticipant` (base), `BlackJackPlayer`, `BlackJackDealer`, `Card`, `Deck`, `Hand`
+   - Services: `BlackJackGameService`, `BlackJackGameStateManager`, `BlackJackLogicService`, `BlackJackDeckManager`
+   - Game states: Waiting, PlayersTurn, DealerTurn, GameOver
+   - Statistics tracking: wins, losses, draws, win rate per player and dealer
+   - Hit/stand mechanics with automatic dealer play
 
 ## Important Patterns & Conventions
 
@@ -54,16 +57,21 @@ wwwroot/             - Static assets (CSS, Bootstrap)
 - Consider this when suggesting dependency injection
 
 ### Model Design
-- **Enums**: `JankenHand` (Rock/Paper/Scissors), `JankenResultEnum` (Win/Lose/Draw)
-- **Records**: Use record types for immutable game results (`MultiPlayerGameRecord`, `JankenGameResult`)
-- **Classes**: Use classes for mutable game state (`JankenPlayer`, `JankenChallengeGame`)
+- **Enums**: `JankenHand` (Rock/Paper/Scissors), `JankenResultEnum` (Win/Lose/Draw), `BlackJackGameState`, `Rank`, `Suit`
+- **Records**: Use record types for immutable game results (`MultiPlayerGameRecord`, `JankenGameResult`, `BlackJackGameRecord`)
+- **Classes**: Use classes for mutable game state (`JankenPlayer`, `JankenChallengeGame`, `BlackJackPlayer`, `BlackJackDealer`)
+- **Inheritance**: `BlackJackParticipant` is the base class for `BlackJackPlayer` and `BlackJackDealer`
 
 ### Game Logic Layer
-- `JankenLogicService`: Pure logic methods (stateless)
+- **JankenLogicService**: Pure logic methods (stateless)
   - `GetWinningHands()`: Determines winning hand(s) from played hands
   - `DetermineWinner()`: Calculates result between two players
-- `JankenGameService`: Game state and multi-player support
-- `JankenChallengeService`: Challenge mode logic
+- **JankenGameService**: Game state and multi-player support
+- **JankenChallengeService**: Challenge mode logic
+- **BlackJackLogicService**: Card value calculation, hand comparison, result determination
+- **BlackJackGameService**: Main game orchestration for multiplayer blackjack
+- **BlackJackGameStateManager**: Game state transitions and turn management
+- **BlackJackDeckManager**: Deck creation, shuffling, and card dealing
 
 ## Styling Conventions
 - Use scoped CSS files (`.razor.css`)
@@ -72,13 +80,15 @@ wwwroot/             - Static assets (CSS, Bootstrap)
 
 ## When Adding New Features
 
-1. **New Game**: Create in `Components/Pages/` with corresponding models in `Models/`
-2. **Services**: Add to `Services/` folder (remember: not auto-registered)
+1. **New Game**: Create in `Components/Pages/` with corresponding models in `Models/<GameName>/`
+2. **Services**: Add to `Services/<GameName>/` folder (remember: not auto-registered)
 3. **Navigation**: Update `NavMenu.razor`
 4. **Models**: 
    - Use records for immutable game results
    - Use classes for mutable state
    - Keep enums simple and descriptive
+   - Use inheritance when shared behavior exists (e.g., `BlackJackParticipant`)
+5. **Service Architecture**: Separate concerns (game service, state manager, logic service, data managers)
 
 ## Common Pitfalls to Avoid
 
@@ -86,6 +96,8 @@ wwwroot/             - Static assets (CSS, Bootstrap)
 - Remember to use `@rendermode InteractiveServer` for interactive components
 - Janken logic uses 3-way comparison (Rock < Paper < Scissors < Rock)
 - Multi-player games support draws (all same or all three types played)
+- BlackJack Ace value is calculated dynamically (11 or 1) in the Score property
+- Always reset game state properly when starting a new round
 
 ## Testing Notes
 

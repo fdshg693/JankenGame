@@ -5,85 +5,133 @@
 
 <h3>ブラックジャック</h3>
 
-<div class="stats-board">
-    <section class="player-stats">
-        <h4>プレイヤー統計</h4>
-        <p>勝利: @Player.Wins</p>
-        <p>敗北: @Player.Losses</p>
-        <p>引き分け: @Player.Draws</p>
-        <p>総ゲーム数: @Player.TotalGames</p>
-        <p>勝率: @Player.WinRate.ToString("F1")%</p>
-    </section>
-
-    <section class="dealer-stats">
-        <h4>ディーラー統計</h4>
-        <p>勝利: @Dealer.Wins</p>
-        <p>敗北: @Dealer.Losses</p>
-        <p>引き分け: @Dealer.Draws</p>
-        <p>総ゲーム数: @Dealer.TotalGames</p>
-        <p>勝率: @Dealer.WinRate.ToString("F1")%</p>
-    </section>
-</div>
-
-<div class="game-board">
-    <section>
-        <h4>@Dealer.Name</h4>
-        @foreach (var card in Dealer.Cards)
+@if (!GameInitialized)
+{
+    <div class="setup-section">
+        <h4>プレイヤー人数を選択</h4>
+        <div class="player-count-selector">
+            @for (int i = 1; i <= 5; i++)
+            {
+                int playerCount = i;
+                <button class="player-count-btn" @onclick="() => InitializeGame(playerCount)">
+                    @playerCount 人
+                </button>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <div class="stats-board">
+        @foreach (var player in gameService.Players)
         {
-            <div class="card">@card.Name</div>
-        }     
-        <p>スコア: @Dealer.Score</p>
-    </section>
-
-    <section>
-        <h4>@Player.Name</h4>
-        @foreach (var card in Player.Cards)
-        {
-            <div class="card">@card.Name</div>
+            <section class="player-stats">
+                <h4>@player.Name 統計</h4>
+                <p>勝利: @player.Wins</p>
+                <p>敗北: @player.Losses</p>
+                <p>引き分け: @player.Draws</p>
+                <p>総ゲーム数: @player.TotalGames</p>
+                <p>勝率: @player.WinRate.ToString("F1")%</p>
+            </section>
         }
-        <p>スコア: @Player.Score</p>
-    </section>
-</div>
+        
+        <section class="dealer-stats">
+            <h4>ディーラー統計</h4>
+            <p>勝利: @Dealer.Wins</p>
+            <p>敗北: @Dealer.Losses</p>
+            <p>引き分け: @Dealer.Draws</p>
+            <p>総ゲーム数: @Dealer.TotalGames</p>
+            <p>勝率: @Dealer.WinRate.ToString("F1")%</p>
+        </section>
+    </div>
 
-<div class="controls">
-    @if (!GameStarted)
-    {
-        <button @onclick="StartGame">ゲーム開始</button>
-    }
-    else if (IsPlayerTurn)
-    {
-        <button @onclick="Hit">ヒット</button>
-        <button @onclick="Stand">スタンド</button>
-    }
-    else if (GameOver)
-    {
-        <p class="result">@ResultMessage</p>
-        <button @onclick="Reset">リセット</button>
-    }
-    else
-    {
-        <p class="result">ディーラーのターン...</p>
-    }
-</div>
+    <div class="game-board">
+        <section class="dealer-section">
+            <h4>@Dealer.Name</h4>
+            <div class="cards-container">
+                @foreach (var card in Dealer.Cards)
+                {
+                    <div class="card">@card.Name</div>
+                }
+            </div>
+            <p class="score">スコア: @Dealer.Score</p>
+        </section>
+
+        <div class="players-section">
+            @foreach (var player in gameService.Players)
+            {
+                <section class="player-section @(IsCurrentPlayer(player) ? "current-player" : "")">
+                    <h4>@player.Name @(IsCurrentPlayer(player) ? "★" : "")</h4>
+                    <div class="cards-container">
+                        @foreach (var card in player.Cards)
+                        {
+                            <div class="card">@card.Name</div>
+                        }
+                    </div>
+                    <p class="score">スコア: @player.Score</p>
+                    @if (GameOver)
+                    {
+                        <p class="result-message">@GetResultMessage(player)</p>
+                    }
+                </section>
+            }
+        </div>
+    </div>
+
+    <div class="controls">
+        @if (!GameStarted)
+        {
+            <button @onclick="StartGame">ゲーム開始</button>
+        }
+        else if (IsPlayerTurn)
+        {
+            <p class="turn-message">@gameService.CurrentPlayer?.Name のターン</p>
+            <button @onclick="Hit">ヒット</button>
+            <button @onclick="Stand">スタンド</button>
+        }
+        else if (GameOver)
+        {
+            <button @onclick="Reset">次のゲーム</button>
+        }
+        else
+        {
+            <p class="turn-message">ディーラーのターン...</p>
+        }
+    </div>
+}
 
 @code {
-    BlackJackPlayer Player = null!;
     BlackJackGameService gameService = null!;
+    bool GameInitialized = false;
 
     protected override void OnInitialized()
     {
         gameService = new BlackJackGameService();
+    }
+
+    void InitializeGame(int playerCount)
+    {
+        gameService = new BlackJackGameService();
         
-        Player = new BlackJackPlayer { Name = "あなた" };
-        gameService.AddPlayer(Player);
+        for (int i = 0; i < playerCount; i++)
+        {
+            var player = new BlackJackPlayer { Name = $"プレイヤー{i + 1}" };
+            gameService.AddPlayer(player);
+        }
+        
+        GameInitialized = true;
     }
 
     BlackJackDealer Dealer => gameService.Dealer;
     bool GameStarted => gameService.GameState != BlackJackGameState.Waiting;
     bool GameOver => gameService.GameState == BlackJackGameState.GameOver;
-    bool IsPlayerTurn => gameService.GameState == BlackJackGameState.PlayersTurn 
-                         && gameService.CurrentPlayer == Player;
-    string ResultMessage => GameOver ? gameService.GetResultMessage(Player) : "";
+    bool IsPlayerTurn => gameService.GameState == BlackJackGameState.PlayersTurn;
+
+    bool IsCurrentPlayer(BlackJackPlayer player) 
+        => gameService.CurrentPlayer == player && IsPlayerTurn;
+
+    string GetResultMessage(BlackJackPlayer player) 
+        => gameService.GetResultMessage(player);
 
     void StartGame()
     {

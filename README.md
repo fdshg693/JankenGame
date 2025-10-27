@@ -10,7 +10,7 @@ Blazor Webアプリケーションで実装された、ジャンケンとブラ�
 
 - **ジャンケンゲーム**: コンピューターとの多人数対戦（2〜6人）
 - **ジャンケンチャレンジ**: コンピューターの手に勝つ手を選ぶチャレンジモード
-- **ブラックジャック**: 21ゲーム（ブラックジャック）
+- **ブラックジャック**: 多人数対応（1〜5人）の21ゲーム、統計情報表示
 
 ## プロジェクト構成
 
@@ -36,15 +36,25 @@ Models/
 │   ├── JankenGameResult.cs
 │   └── MultiPlayerGameRecord.cs
 └── BlackJack/                # ブラックジャック関連モデル
+    ├── BlackJackParticipant.cs
+    ├── BlackJackPlayer.cs
+    ├── BlackJackDealer.cs
+    ├── BlackJackGameState.cs
+    ├── BlackJackGameRecord.cs
     ├── Card.cs
     ├── Deck.cs
     └── Hand.cs
 
 Services/
-└── Janken/                   # ジャンケン関連サービス
-    ├── JankenLogicService.cs
-    ├── JankenGameService.cs
-    └── JankenChallengeService.cs
+├── Janken/                   # ジャンケン関連サービス
+│   ├── JankenLogicService.cs
+│   ├── JankenGameService.cs
+│   └── JankenChallengeService.cs
+└── BlackJack/                # ブラックジャック関連サービス
+    ├── BlackJackGameService.cs
+    ├── BlackJackGameStateManager.cs
+    ├── BlackJackLogicService.cs
+    └── BlackJackDeckManager.cs
 ```
 
 ## 技術スタック
