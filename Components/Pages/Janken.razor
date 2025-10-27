@@ -5,21 +5,77 @@
 
 <h3>じゃんけんゲーム</h3>
 
-<div class="choices">
-    <button @onclick="() => Play(JankenHand.Rock)">✊  グー</button>
-    <button @onclick="() => Play(JankenHand.Paper)">✋  パー</button>
-    <button @onclick="() => Play(JankenHand.Scissors)">✌️  チョキ</button>
+<div class="game-setup">
+    <div class="player-count-control">
+        <label>対戦人数 (あなたを含む): </label>
+        <select value="@selectedPlayerCount.ToString()" @onchange="OnPlayerCountChanged">
+            <option value="2">2人</option>
+            <option value="3">3人</option>
+            <option value="4">4人</option>
+            <option value="5">5人</option>
+            <option value="6">6人</option>
+        </select>
+    </div>
 </div>
 
-@if (Player.Hand != null && Computer.Hand != null)
+<div class="choices">
+    <button @onclick="() => Play(JankenHand.Rock)">✊ グー</button>
+    <button @onclick="() => Play(JankenHand.Paper)">✋ パー</button>
+    <button @onclick="() => Play(JankenHand.Scissors)">✌️ チョキ</button>
+</div>
+
+@if (AllPlayersReady)
 {
     <div class="result">
-        <p>あなた：@Player.Hand?.GetDescription() → コンピューター：@Computer.Hand?.GetDescription()</p>
-        <p>@OutcomeMessage</p>
-        <p>＜現在のスコア＞ @RecordList.TotalWins　勝:  @RecordList.TotalLosses 敗;　@RecordList.TotalDraws 引き分け</p>
+        <div class="hands-display">
+            <h4>各プレイヤーの手</h4>
+            @foreach (var player in Players)
+            {
+                <div class="player-hand">
+                    <strong>@player.Name</strong>: @player.Hand?.GetDescription()
+                </div>
+            }
+        </div>
+        
+        <div class="game-result">
+            <p class="outcome-message">@OutcomeMessage</p>
+            
+            @if (LastWinningHand != null)
+            {
+                <div class="winners">
+                    <p><strong>勝者:</strong> @string.Join(", ", LastWinners.Select(id => Players.First(p => p.Id == id).Name))</p>
+                </div>
+            }
+        </div>
+
         <button @onclick="ResetGame">リセット</button>
     </div>
 }
+
+<div class="score-board">
+    <h4>スコアボード</h4>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>プレイヤー</th>
+                <th>勝</th>
+                <th>敗</th>
+                <th>引き分け</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var player in Players)
+            {
+                <tr>
+                    <td>@player.Name</td>
+                    <td>@RecordList.GetWins(player.Id)</td>
+                    <td>@RecordList.GetLosses(player.Id)</td>
+                    <td>@RecordList.GetDraws(player.Id)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
 
 @if (RecentRecords.Any())
 {
@@ -29,7 +85,20 @@
             @foreach (var record in RecentRecords)
             {
                 <li>
-                    あなた：@record.PlayerHand.GetDescription() ／ コンピューター：@record.ComputerHand.GetDescription() → 結果：@record.Outcome.GetDescription()（@record.Timestamp.ToString("HH:mm:ss")）
+                    @foreach (var kvp in record.PlayerHands)
+                    {
+                        var playerName = Players.First(p => p.Id == kvp.Key).Name;
+                        <span>@playerName: @kvp.Value.GetDescription() / </span>
+                    }
+                    @if (record.WinningHand != null)
+                    {
+                        <span>→ 勝ち手: @record.WinningHand.Value.GetDescription()</span>
+                    }
+                    else
+                    {
+                        <span>→ 引き分け</span>
+                    }
+                    <span>（@record.Timestamp.ToString("HH:mm:ss")）</span>
                 </li>
             }
         </ul>
@@ -37,55 +106,106 @@
 }
 
 @code {
-    string OutcomeMessage = "";
+    private int selectedPlayerCount = 3;
+    private string OutcomeMessage = "";
+    private JankenHand? LastWinningHand = null;
+    private List<string> LastWinners = new();
 
-    JankenPlayer Player = new JankenPlayer();
-    JankenPlayer Computer = new JankenPlayer();
-    JankenRecordList RecordList = new JankenRecordList();
-    Random rnd = new();
-    JankenGameService gameService = new JankenGameService();
+    private List<JankenPlayer> Players = new();
+    private MultiPlayerGameRecordList RecordList = new();
+    private Random rnd = new();
+    private JankenGameService gameService = new();
 
-    IEnumerable<JankenRecord> RecentRecords => RecordList.OrderByDescending(r => r.Timestamp).Take(5);
+    private bool AllPlayersReady => Players.All(p => p.Hand != null);
+    private IEnumerable<MultiPlayerGameRecord> RecentRecords => RecordList.OrderByDescending(r => r.Timestamp).Take(5);
 
-    void Play(JankenHand userJankenHand)
+    protected override void OnInitialized()
     {
-        Player.Hand = userJankenHand;
-        Computer.Hand = (JankenHand)rnd.Next(0, 3);
+        InitializePlayers();
+    }
+
+    private void InitializePlayers()
+    {
+        Players.Clear();
+        // ユーザー（最初のプレイヤー）
+        Players.Add(new JankenPlayer("あなた", PlayerType.Human));
+        
+        // コンピューターのプレイヤー
+        for (int i = 1; i < selectedPlayerCount; i++)
+        {
+            Players.Add(new JankenPlayer($"コンピューター{i}", PlayerType.Computer));
+        }
+    }
+
+    private void OnPlayerCountChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int count))
+        {
+            selectedPlayerCount = count;
+            InitializePlayers();
+            ResetGame();
+            StateHasChanged();
+        }
+    }
+
+    private void Play(JankenHand userJankenHand)
+    {
+        // ユーザーが手を出す
+        Players[0].Hand = userJankenHand;
+
+        // コンピューターが手を出す
+        for (int i = 1; i < Players.Count; i++)
+        {
+            Players[i].Hand = (JankenHand)rnd.Next(0, 3);
+        }
+
         DetermineWinner();
     }
 
-    void DetermineWinner()
+    private void DetermineWinner()
     {
-        if (Player.Hand == null)
+        if (!AllPlayersReady)
         {
             OutcomeMessage = "手を選んでください。";
             return;
         }
-        if (Computer.Hand == null)
+
+        try
         {
-            OutcomeMessage = "コンピューターの手を決定中...";
-            return;
+            var (winningHand, winnerIds) = gameService.DetermineMultiPlayerWinner(Players);
+            
+            // 記録を追加
+            var playerHands = Players.ToDictionary(p => p.Id, p => p.Hand!.Value);
+            RecordList.AddRecord(playerHands, winningHand, winnerIds);
+
+            LastWinningHand = winningHand;
+            LastWinners = winnerIds;
+
+            // メッセージを設定
+            if (winningHand == null)
+            {
+                OutcomeMessage = "引き分け！";
+            }
+            else
+            {
+                var winnerNames = string.Join(", ", winnerIds.Select(id => Players.First(p => p.Id == id).Name));
+                OutcomeMessage = $"{winnerNames}の勝ち！🎉";
+            }
         }
-
-        // サービスから結果を取得
-        var result = gameService.DetermineWinner(Player.Hand.Value, Computer.Hand.Value);
-        RecordList.AddRecord(Player.Hand, Computer.Hand, result);
-
-        // メッセージを設定
-        OutcomeMessage = result switch
+        catch (Exception ex)
         {
-            JankenResultEnum.Win => "あなたの勝ち！🎉",
-            JankenResultEnum.Lose => "コンピューターの勝ち...",
-            JankenResultEnum.Draw => "引き分け！",
-            _ => "エラーが発生しました"
-        };
+            OutcomeMessage = $"エラー: {ex.Message}";
+        }
     }
 
-    void ResetGame()
+    private void ResetGame()
     {
-        Player = new JankenPlayer();
-        Computer = new JankenPlayer();
+        foreach (var player in Players)
+        {
+            player.Hand = null;
+        }
         OutcomeMessage = "";
-        RecordList.Clear();
+        LastWinningHand = null;
+        LastWinners.Clear();
     }
 }
