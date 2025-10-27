@@ -1,5 +1,4 @@
 ﻿@page "/blackjack"
-@using JankenGame.Models
 @using JankenGame.Models.BlackJack
 @using JankenGame.Services.BlackJack
 @rendermode InteractiveServer
@@ -51,109 +50,64 @@
     {
         <button @onclick="StartGame">ゲーム開始</button>
     }
-    else if (!GameOver)
+    else if (IsPlayerTurn)
     {
         <button @onclick="Hit">ヒット</button>
         <button @onclick="Stand">スタンド</button>
     }
-    else
+    else if (GameOver)
     {
         <p class="result">@ResultMessage</p>
         <button @onclick="Reset">リセット</button>
     }
+    else
+    {
+        <p class="result">ディーラーのターン...</p>
+    }
 </div>
 
 @code {
-    bool GameStarted, GameOver;
-    string ResultMessage = "";
     BlackJackPlayer Player = null!;
-    BlackJackDealer Dealer = null!;
-    
     BlackJackGameService gameService = null!;
-    BlackJackLogicService logicService = null!;
 
     protected override void OnInitialized()
     {
         gameService = new BlackJackGameService();
-        logicService = new BlackJackLogicService();
         
-        Player = new BlackJackPlayer();
-        Dealer = new BlackJackDealer();
-        GameStarted = false;
-        GameOver = false;
-        ResultMessage = "";
+        Player = new BlackJackPlayer { Name = "あなた" };
+        gameService.AddPlayer(Player);
     }
 
+    BlackJackDealer Dealer => gameService.Dealer;
+    bool GameStarted => gameService.GameState != BlackJackGameState.Waiting;
+    bool GameOver => gameService.GameState == BlackJackGameState.GameOver;
+    bool IsPlayerTurn => gameService.GameState == BlackJackGameState.PlayersTurn 
+                         && gameService.CurrentPlayer == Player;
+    string ResultMessage => GameOver ? gameService.GetResultMessage(Player) : "";
+
     void StartGame()
-    {                
-        // 初期配牌
-        Player.Cards.Add(gameService.DrawCard());
-        Player.Cards.Add(gameService.DrawCard());
-        Dealer.Cards.Add(gameService.DrawCard());
-        Dealer.Cards.Add(gameService.DrawCard());
-        GameStarted = true;
-        
-        // ブラックジャックチェック
-        if (logicService.IsBlackjack(Player.Score, Player.Cards.Count))
-        {
-            EndGame();
-        }
+    {
+        gameService.StartGame();
     }
 
     void Hit()
     {
-        Player.Cards.Add(gameService.DrawCard());
-        if (Player.IsBust)
-            EndGame();
+        if (IsPlayerTurn)
+        {
+            gameService.Hit();
+        }
     }
 
     void Stand()
     {
-        // ディーラーのターン
-        while (logicService.ShouldDealerHit(Dealer.Score))
+        if (IsPlayerTurn)
         {
-            Dealer.Cards.Add(gameService.DrawCard());
-        }
-        EndGame();
-    }
-
-    void EndGame()
-    {
-        GameOver = true;
-        ResultMessage = logicService.DetermineWinner(
-            Player.Score, 
-            Dealer.Score, 
-            Player.IsBust, 
-            Dealer.IsBust
-        );
-        RecordResult(ResultMessage);
-    }
-
-    void RecordResult(string result)
-    {
-        if (result.Contains("プレイヤー"))
-        {
-            Player.RecordWin();
-            Dealer.RecordLoss();
-        }
-        else if (result.Contains("ディーラー"))
-        {
-            Player.RecordLoss();
-            Dealer.RecordWin();
-        }
-        else
-        {
-            Player.RecordDraw();
-            Dealer.RecordDraw();
+            gameService.Stand();
         }
     }
 
     void Reset()
     {
-        GameStarted = false;
-        GameOver = false;
-        gameService.ReturnCards(Player, Dealer);
-        Player.ResetCards();
-        Dealer.ResetCards();
+        gameService.ResetGame();
     }
 }
